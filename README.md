@@ -97,7 +97,7 @@ print, speaker notes). A slide is split into **blocks** (headings, paragraphs, l
 code, callouts, tables); the block is the unit of the cursor, of navigation and of
 `dd`/`cc`.
 
-## Images
+## Images and links
 
 `:image` asks for an image URL and inserts it as markdown, hotlinked from its host:
 
@@ -108,6 +108,9 @@ code, callouts, tables); the block is the unit of the cursor, of navigation and 
 `|60%` is optional (25-100, default 100) and can be edited by hand. The dialog previews
 the image at the chosen width; the description field is optional (accessibility and the
 broken-image fallback). The image is loaded from its host each time the slide is shown.
+
+`:link` asks for a URL and a text (defaults to the URL) and inserts `[text](url)` at the
+cursor.
 
 ## Speaker notes
 
@@ -127,6 +130,7 @@ through `BroadcastChannel`; no server, no account.
 | `:tutor` | open the tutorial |
 | `:paragraph` | new paragraph after the current block |
 | `:image` | insert an image from a URL |
+| `:link` | insert a link (URL + text) |
 | `s` | download the deck as markdown |
 | `:export` | PDF through the browser print dialog |
 | `:theme nord` | palette: `ardoise`, `paper`, `gruvbox`, `nord` |

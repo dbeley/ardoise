@@ -8,6 +8,7 @@
   import { undo as editorUndo } from '@codemirror/commands'
   import { storage, download } from './lib/storage.js'
   import { imageMarkdown, imageInsertion } from './lib/images.js'
+  import { linkMarkdown, linkInsertion } from './lib/links.js'
   import SlideView from './components/SlideView.svelte'
   import SlideEditor from './components/SlideEditor.svelte'
   import Chrome from './components/Chrome.svelte'
@@ -15,6 +16,7 @@
   import HelpOverlay from './components/HelpOverlay.svelte'
   import Overview from './components/Overview.svelte'
   import ImageDialog from './components/ImageDialog.svelte'
+  import LinkDialog from './components/LinkDialog.svelte'
   import starter from '../decks/starter.md?raw'
   import tutorial from '../decks/tutor.md?raw'
 
@@ -533,6 +535,23 @@
     mode = 'image'
   }
 
+  function openLink() {
+    mode = 'link'
+  }
+
+  function insertLink({ text: label, url }) {
+    if (!view) return
+    const markup = linkMarkdown({ text: label, url })
+    const { at, insert, pos } = linkInsertion(text(), head(), markup)
+    view.dispatch({
+      changes: { from: at, insert },
+      selection: { anchor: pos },
+      scrollIntoView: true,
+    })
+    place(pos)
+    setMode('present')
+  }
+
   function insertImage({ alt, src, width }) {
     if (!view) return
     const markup = imageMarkdown({ alt, src, width })
@@ -624,7 +643,8 @@
     { id: 'new', key: 'new', label: 'blank deck', run: newDeck },
     { id: 'paragraph', key: 'paragraph', label: 'new paragraph', run: newParagraph },
     { id: 'tutor', key: 'tutor', label: 'open the tutorial', run: openTutorial },
-    { id: 'image', key: 'image', label: 'insert an image from the web', run: openImage },
+    { id: 'image', key: 'image', label: 'insert an image from a URL', run: openImage },
+    { id: 'link', key: 'link', label: 'insert a link (URL + text)', run: openLink },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {
         const argument = q.split(/\s+/)[1]
@@ -746,7 +766,7 @@
       return
     }
 
-    if (mode === 'image') return
+    if (mode === 'image' || mode === 'link') return
 
     if (mode === 'insert') {
       if (key === 'esc') {
@@ -982,6 +1002,12 @@
 <ImageDialog
   open={mode === 'image'}
   oninsert={insertImage}
+  onclose={() => setMode('present')}
+/>
+
+<LinkDialog
+  open={mode === 'link'}
+  oninsert={insertLink}
   onclose={() => setMode('present')}
 />
 
