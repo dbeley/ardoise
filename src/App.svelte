@@ -8,6 +8,7 @@
   import { undo as editorUndo } from '@codemirror/commands'
   import { storage, download } from './lib/storage.js'
   import { imageMarkdown, imageInsertion } from './lib/images.js'
+  import { codeInsertion } from './lib/code.js'
   import { linkMarkdown, linkInsertion } from './lib/links.js'
   import SlideView from './components/SlideView.svelte'
   import SlideEditor from './components/SlideEditor.svelte'
@@ -571,16 +572,36 @@
     setMode('present')
   }
 
+  /** Where a new block goes: the end of the current block, or the deck's end. */
+  function blockEnd() {
+    const value = text()
+    const block = docBlocks[blockIndex]
+    return block
+      ? lineOffset(block.endLine) + (value.split('\n')[block.endLine]?.length ?? 0)
+      : value.length
+  }
+
+  /** `:code [lang]`: an empty fenced block after the current block. */
+  function insertCode(lang) {
+    if (!view) return
+    const value = text()
+    const { at, insert, pos } = codeInsertion(value, blockEnd(), lang)
+    view.dispatch({
+      changes: { from: at, insert },
+      selection: { anchor: pos },
+      scrollIntoView: true,
+    })
+    place(pos)
+    setMode('insert')
+  }
+
   function insertImage({ alt, src, width }) {
     if (!view) return
     const markup = imageMarkdown({ alt, src, width })
     const value = text()
-    const block = docBlocks[blockIndex]
     // No block (empty deck, or only the starter comment): append at the end,
     // otherwise the image would be glued to the comment and stay invisible.
-    const at = block
-      ? lineOffset(block.endLine) + (value.split('\n')[block.endLine]?.length ?? 0)
-      : value.length
+    const at = blockEnd()
     const { insert, pos } = imageInsertion(value, at, markup)
     view.dispatch({
       changes: { from: at, insert },
@@ -663,6 +684,7 @@
     { id: 'paragraph', key: 'paragraph', label: 'new paragraph', run: newParagraph },
     { id: 'tutor', key: 'tutor', label: 'open the tutorial', run: openTutorial },
     { id: 'image', key: 'image', label: 'insert an image from a URL', run: openImage },
+    { id: 'code', key: 'code nix', label: 'insert a code block', run: (q) => insertCode(q.split(/\s+/)[1]) },
     { id: 'link', key: 'link', label: 'insert a link (URL + text)', run: openLink },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {

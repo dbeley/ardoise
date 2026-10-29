@@ -132,6 +132,7 @@ through `BroadcastChannel`; no server, no account.
 | `:tutor` | open the tutorial |
 | `:paragraph` | new paragraph after the current block |
 | `:image` | insert an image from a URL |
+| `:code` / `:code nix` | insert an empty code block (language optional) |
 | `:link` | insert a link (URL + text) |
 | `s` | download the deck as markdown |
 | `:export` | PDF through the browser print dialog |
