@@ -1,5 +1,5 @@
 /**
- * deck.js — parsing / sérialisation du format ardoise.
+ * deck.js - parsing / sérialisation du format ardoise.
  *
  * Format :
  *   ---

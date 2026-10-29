@@ -1,5 +1,5 @@
 {
-  description = "ardoise — scène de présentation pilotée au clavier";
+  description = "ardoise - scène de présentation pilotée au clavier";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -15,7 +15,7 @@
           packages = with pkgs; [ nodejs_22 git ];
 
           shellHook = ''
-            echo "ardoise — node $(node --version)"
+            echo "ardoise - node $(node --version)"
             echo "  npm install && npm run dev"
           '';
         };

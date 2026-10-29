@@ -46,6 +46,7 @@
   let printAll = $state(false)
   let stageEl = $state(null)
   let textareaEl = $state(null)
+  let fileInput = $state(null)
 
   let countBuf = ''
   let pendingOp = null
@@ -486,9 +487,7 @@
     setTimeout(() => (printAll = false), 1200)
   }
 
-  async function loadFile(file) {
-    if (!file) return
-    const text = await file.text()
+  async function adoptDeck(text, label) {
     source = text
     history = []
     applyDeckTheme(deck.meta)
@@ -496,7 +495,26 @@
     blockIndex = 0
     caret = 0
     phantom = null
-    showToast(`deck chargé : ${file.name}`)
+    if (label) showToast(label)
+  }
+
+  async function loadFile(file) {
+    if (!file) return
+    await adoptDeck(await file.text(), `deck chargé : ${file.name}`)
+  }
+
+  function openFilePicker() {
+    fileInput?.click()
+  }
+
+  async function importFromUrl(url) {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(String(response.status))
+      await adoptDeck(await response.text(), 'deck importé depuis l’URL')
+    } catch {
+      showToast('import impossible (URL ou CORS)')
+    }
   }
 
   function onDrop(event) {
@@ -596,6 +614,11 @@
     { id: 'presenter', key: 'presenter', label: 'fenêtre orateur', run: openPresenter },
     { id: 'timer', key: 'timer', label: 'chrono marche / arrêt', run: toggleTimer },
     { id: 'timer-reset', key: 'timer reset', label: 'remettre le chrono à zéro', run: resetTimer },
+    { id: 'open', key: 'open', label: 'importer un fichier markdown', run: (q) => {
+        const argument = q.split(/\s+/)[1]
+        if (argument) importFromUrl(argument)
+        else openFilePicker()
+      } },
     { id: 'save', key: 'save', label: 'télécharger le markdown', run: saveDeck },
     { id: 'export', key: 'export', label: 'exporter en PDF (impression)', run: exportPdf },
     { id: 'undo', key: 'undo', label: 'annuler la dernière édition', run: undo },
@@ -885,6 +908,18 @@
 
 </script>
 
+<input
+  type="file"
+  accept=".md,.markdown,text/markdown"
+  bind:this={fileInput}
+  hidden
+  onchange={(event) => {
+    const file = event.currentTarget.files?.[0]
+    if (file) loadFile(file)
+    event.currentTarget.value = ''
+  }}
+/>
+
 <svelte:window
   onkeydown={onKeydown}
   onbeforeinput={onBeforeInput}
@@ -979,7 +1014,7 @@
         <div class="onboard-list">
           <div class="onboard-row">
             <span class="help-keys"><kbd>j</kbd> <kbd>k</kbd></span>
-            <span>paragraphe suivant / précédent — c’est aussi le rythme des slides</span>
+            <span>paragraphe suivant / précédent - c’est aussi le rythme des slides</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>espace</kbd></span>
@@ -991,7 +1026,7 @@
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>w</kbd> <kbd>b</kbd> <kbd>d</kbd><kbd>w</kbd></span>
-            <span>mot à mot, suppression — édition modale complète</span>
+            <span>mot à mot, suppression - édition modale complète</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>?</kbd> <kbd>:</kbd> <kbd>.</kbd></span>
@@ -999,7 +1034,7 @@
           </div>
         </div>
         <p style="margin:0;font-size:.78rem;color:var(--muted)">
-          Glisse un fichier <code>.md</code> sur la fenêtre pour présenter ton propre deck.
+          Glisse un fichier <code>.md</code> sur la fenêtre, ou <code>:open</code> pour l’importer.
         </p>
         <button
           type="button"

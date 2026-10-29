@@ -1,5 +1,5 @@
 /**
- * storage.js — persistance locale (aucun serveur).
+ * storage.js - persistance locale (aucun serveur).
  * Tout est best-effort : un navigateur en navigation privée ne doit pas
  * empêcher l'application de démarrer.
  */

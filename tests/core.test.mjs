@@ -238,4 +238,4 @@ test('entrée dans une liste numérotée garde le préfixe', () => {
   assert.equal(result.text, '1. un\n1. ')
 })
 
-console.log(`\n${passed} vérifications passées${process.exitCode ? ' — échecs ci-dessus' : ''}`)
+console.log(`\n${passed} vérifications passées${process.exitCode ? ' - échecs ci-dessus' : ''}`)

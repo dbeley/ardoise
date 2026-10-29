@@ -1,5 +1,5 @@
 /* ============================================================
-   ardoise — feuille globale
+   ardoise - feuille globale
    Un seul fichier : le HTML des slides vient de markdown-it,
    donc les styles ne peuvent pas être scopés par composant.
    ============================================================ */
@@ -1188,7 +1188,7 @@ kbd {
 
 
 /* ============================================================
-   blocs & curseur — un seul curseur, deux granularités
+   blocs & curseur - un seul curseur, deux granularités
    ============================================================ */
 
 .block {

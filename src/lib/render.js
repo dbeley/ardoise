@@ -1,5 +1,5 @@
 /**
- * render.js — markdown -> HTML, adapter au rendu « presenterm ».
+ * render.js - markdown -> HTML, adapter au rendu « presenterm ».
  *
  * Ajoute :
  *  - coloration syntaxique (highlight.js, thème maison)

@@ -24,7 +24,7 @@ Une idée arrive, et il faut trois outils pour la montrer.
 <!-- pause -->
 
 ::: warn
-Trois fenêtres, c'est trois occasions de perdre le fil — et le spectateur avec.
+Trois fenêtres, c'est trois occasions de perdre le fil - et le spectateur avec.
 :::
 
 <!-- note: C'est le constat de départ. Ne pas le surjouer : une phrase suffit. -->

@@ -1,7 +1,13 @@
 # ardoise
 
+[![deploy](https://github.com/dbeley/ardoise/actions/workflows/deploy.yml/badge.svg)](https://github.com/dbeley/ardoise/actions/workflows/deploy.yml)
+[![license](https://img.shields.io/github/license/dbeley/ardoise)](LICENSE)
+
+**[Essayer en ligne](https://dbeley.github.io/ardoise/)** - rien à installer, le deck
+de démonstration se charge tout seul.
+
 Scène de présentation **pilotée au clavier** : un deck markdown, un curseur unique,
-une palette de commandes, des notes orateur — dans une seule fenêtre.
+une palette de commandes, des notes orateur - dans une seule fenêtre.
 
 Pensé pour les vidéos où l'on **tape pendant qu'on parle**. La présentation et
 l'édition ne sont pas deux écrans : c'est le même curseur, à deux granularités.
@@ -16,7 +22,7 @@ espace   pas suivant       échap    rendre               .        écran noir
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # dist/ — statique, ouvrable n'importe où
+npm run build      # dist/ - statique, ouvrable n'importe où
 npm run preview    # sert dist/
 node tests/core.test.mjs   # noyau : blocs, édition, mouvements
 ```
@@ -76,6 +82,23 @@ ne bouge pas. C'est la contrainte du genre « je pense à voix haute ».
 `j`/`k` sont volontairement le paragraphe, pas la ligne : c'est ce qui fait coïncider
 navigation et tournage. Les lignes internes se parcourent avec `↑`/`↓`.
 
+## Importer et exporter
+
+L'application est un site statique : tes fichiers ne quittent jamais le navigateur,
+il n'y a ni compte ni serveur.
+
+| geste | effet |
+|---|---|
+| glisser un `.md` sur la fenêtre | l'ouvrir |
+| `:open` | choisir un fichier markdown |
+| `:open https://…/deck.md` | importer depuis une URL (si le serveur autorise CORS) |
+| `?deck=./deck.md` | ouvrir un deck au chargement |
+| `s` | télécharger le deck courant en markdown |
+| `:export` | PDF via l'impression du navigateur |
+
+Les éditions sont conservées dans `localStorage` : tu peux fermer l'onglet et
+retrouver ta slide. `:reset` revient au deck de démonstration.
+
 ## Format du deck
 
 ```markdown
@@ -129,7 +152,7 @@ compte. Si la fenêtre est ouverte après coup, elle se raccroche au premier cha
   que la slide.
 - Source « navigateur » en 1920×1080 sur `http://localhost:5173/?raw=1`.
 - `f` pour le plein écran si tu captures l'écran plutôt que le navigateur.
-- `screenkey` (ou l'overlay clavier OBS) rend les raccourcis lisibles — c'est ce qui
+- `screenkey` (ou l'overlay clavier OBS) rend les raccourcis lisibles - c'est ce qui
   donne au genre « je tape en direct » sa lisibilité.
 
 Paramètres d'URL utiles :
@@ -206,7 +229,7 @@ Deux principes tiennent l'ensemble :
 1. **la table `KEYMAP`** de `lib/keys.js` alimente à la fois le gestionnaire
    d'événements et l'aide `?` : l'aide ne peut pas mentir sur le comportement ;
 2. **l'édition remplace des lignes** : chaque bloc connaît sa plage dans le markdown,
-   donc une modification ne réécrit jamais le fichier — les notes et les pauses
+   donc une modification ne réécrit jamais le fichier - les notes et les pauses
    restent intactes.
 
 ## Limites assumées
@@ -218,7 +241,7 @@ Deux principes tiennent l'ensemble :
 - **Mermaid** est chargé à la demande (~1 Mo) et seulement s'il y a un diagramme.
 - **La fenêtre orateur** peut être bloquée par le bloqueur de pop-ups : autoriser le site.
 - **Édition = markdown brut** : le paragraphe édité montre sa source, pas son rendu.
-  C'est le prix de l'exactitude — et ce qui rend le geste lisible à l'écran.
+  C'est le prix de l'exactitude - et ce qui rend le geste lisible à l'écran.
 - **Pas de sélection visuelle** (`v`), pas de presse-papier interne (`y`/`p`).
 - **Pas de multi-écran synchronisé** au-delà des notes : une seule scène pilote.
 

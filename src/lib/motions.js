@@ -1,5 +1,5 @@
 /**
- * motions.js — déplacements et opérateurs sur le texte d'un bloc.
+ * motions.js - déplacements et opérateurs sur le texte d'un bloc.
  *
  * Le bloc est une chaîne (le markdown brut du paragraphe). Toutes les
  * fonctions raisonnent en index de caractère dans cette chaîne, ce qui rend

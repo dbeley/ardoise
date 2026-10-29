@@ -35,7 +35,7 @@
 </script>
 
 <svelte:head>
-  <title>orateur — ardoise</title>
+  <title>orateur - ardoise</title>
 </svelte:head>
 
 <div class="presenter">
@@ -62,7 +62,7 @@
     <aside class="presenter-side">
       <div class="presenter-card">
         <h3>slide</h3>
-        <p class="presenter-big">{payload ? `${payload.index + 1} / ${payload.total}` : '—'}</p>
+        <p class="presenter-big">{payload ? `${payload.index + 1} / ${payload.total}` : '-'}</p>
         {#if payload?.steps > 1}
           <p class="presenter-small">pas {payload.step + 1} / {payload.steps}</p>
         {/if}
@@ -77,7 +77,7 @@
 
       <div class="presenter-card">
         <h3>actuelle</h3>
-        <p class="presenter-title">{payload?.title ?? '—'}</p>
+        <p class="presenter-title">{payload?.title ?? '-'}</p>
       </div>
 
       <div class="presenter-card">
@@ -88,7 +88,7 @@
   </main>
 
   <footer class="presenter-foot">
-    <span>cette fenêtre ne sert qu’à toi — ne pas capturer dans OBS</span>
+    <span>cette fenêtre ne sert qu’à toi - ne pas capturer dans OBS</span>
   </footer>
 </div>
 

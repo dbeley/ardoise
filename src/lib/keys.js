@@ -1,5 +1,5 @@
 /**
- * keys.js — source unique de vérité du clavier.
+ * keys.js - source unique de vérité du clavier.
  * La même table alimente le gestionnaire d'événements et l'aide (`?`),
  * donc l'aide ne peut pas diverger du comportement réel.
  *
