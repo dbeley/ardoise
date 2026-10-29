@@ -97,6 +97,19 @@ print, speaker notes). A slide is split into **blocks** (headings, paragraphs, l
 code, callouts, tables); the block is the unit of the cursor, of navigation and of
 `dd`/`cc`.
 
+## Images
+
+`:image` searches [Openverse](https://openverse.org) (free, no key) and inserts the
+chosen picture as markdown, hotlinked from its host:
+
+```markdown
+![A cat|60%](https://host.example/cat.jpg)
+```
+
+`|60%` is optional (25-100, default 100) and can be edited by hand. The dialog shows the
+creator and license of the result. The search needs the network; the image itself is
+loaded from its host each time the slide is shown.
+
 ## Speaker notes
 
 `P` opens a second window for the other screen: the current notes in large type, the
@@ -114,6 +127,7 @@ through `BroadcastChannel`; no server, no account.
 | `:new` / `:reset` | start over from a blank deck |
 | `:tutor` | open the tutorial |
 | `:paragraph` | new paragraph after the current block |
+| `:image` | insert an image from the web |
 | `s` | download the deck as markdown |
 | `:export` | PDF through the browser print dialog |
 | `:theme nord` | palette: `ardoise`, `paper`, `gruvbox`, `nord` |

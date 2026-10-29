@@ -7,12 +7,14 @@
   import { setDocument, setReadOnly, setPending } from './lib/editor.js'
   import { undo as editorUndo } from '@codemirror/commands'
   import { storage, download } from './lib/storage.js'
+  import { imageMarkdown } from './lib/images.js'
   import SlideView from './components/SlideView.svelte'
   import SlideEditor from './components/SlideEditor.svelte'
   import Chrome from './components/Chrome.svelte'
   import CommandBar from './components/CommandBar.svelte'
   import HelpOverlay from './components/HelpOverlay.svelte'
   import Overview from './components/Overview.svelte'
+  import ImageDialog from './components/ImageDialog.svelte'
   import starter from '../decks/starter.md?raw'
   import tutorial from '../decks/tutor.md?raw'
 
@@ -527,6 +529,28 @@
     adoptDeck(tutorial, 'tutorial loaded')
   }
 
+  function openImage() {
+    mode = 'image'
+  }
+
+  function insertImage({ alt, src, width }) {
+    if (!view) return
+    const markup = imageMarkdown({ alt, src, width })
+    const block = docBlocks[blockIndex]
+    const value = text()
+    const offset = block
+      ? lineOffset(block.endLine) + (value.split('\n')[block.endLine]?.length ?? 0)
+      : head()
+    const insert = `${block ? '\n\n' : ''}${markup}\n`
+    view.dispatch({
+      changes: { from: offset, insert },
+      selection: { anchor: offset + insert.length },
+      scrollIntoView: true,
+    })
+    place(offset + insert.length)
+    setMode('present')
+  }
+
   async function toggleFullscreen() {
     try {
       if (document.fullscreenElement) await document.exitFullscreen()
@@ -598,6 +622,7 @@
     { id: 'new', key: 'new', label: 'blank deck', run: newDeck },
     { id: 'paragraph', key: 'paragraph', label: 'new paragraph', run: newParagraph },
     { id: 'tutor', key: 'tutor', label: 'open the tutorial', run: openTutorial },
+    { id: 'image', key: 'image', label: 'insert an image from the web', run: openImage },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {
         const argument = q.split(/\s+/)[1]
@@ -626,7 +651,8 @@
     mode = 'present'
     if (command?.run) {
       command.run(query)
-      setMode('present')
+      // A command may open a mode (image, help, overview): keep it.
+      if (mode === 'present') setMode('present')
       return
     }
     const trimmed = query.trim()
@@ -717,6 +743,8 @@
       }
       return
     }
+
+    if (mode === 'image') return
 
     if (mode === 'insert') {
       if (key === 'esc') {
@@ -946,6 +974,12 @@
   open={mode === 'command'}
   {commands}
   onrun={runCommand}
+  onclose={() => setMode('present')}
+/>
+
+<ImageDialog
+  open={mode === 'image'}
+  oninsert={insertImage}
   onclose={() => setMode('present')}
 />
 
