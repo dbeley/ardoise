@@ -7,7 +7,7 @@
   import { setDocument, setReadOnly, setPending } from './lib/editor.js'
   import { undo as editorUndo } from '@codemirror/commands'
   import { storage, download } from './lib/storage.js'
-  import { imageMarkdown } from './lib/images.js'
+  import { imageMarkdown, imageInsertion } from './lib/images.js'
   import SlideView from './components/SlideView.svelte'
   import SlideEditor from './components/SlideEditor.svelte'
   import Chrome from './components/Chrome.svelte'
@@ -536,18 +536,20 @@
   function insertImage({ alt, src, width }) {
     if (!view) return
     const markup = imageMarkdown({ alt, src, width })
-    const block = docBlocks[blockIndex]
     const value = text()
-    const offset = block
+    const block = docBlocks[blockIndex]
+    // No block (empty deck, or only the starter comment): append at the end,
+    // otherwise the image would be glued to the comment and stay invisible.
+    const at = block
       ? lineOffset(block.endLine) + (value.split('\n')[block.endLine]?.length ?? 0)
-      : head()
-    const insert = `${block ? '\n\n' : ''}${markup}\n`
+      : value.length
+    const { insert, pos } = imageInsertion(value, at, markup)
     view.dispatch({
-      changes: { from: offset, insert },
-      selection: { anchor: offset + insert.length },
+      changes: { from: at, insert },
+      selection: { anchor: pos },
       scrollIntoView: true,
     })
-    place(offset + insert.length)
+    place(pos)
     setMode('present')
   }
 

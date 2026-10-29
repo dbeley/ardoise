@@ -38,6 +38,29 @@ export function imageMarkdown({ alt = '', src = '', width = null } = {}) {
   return `![${label}](${src})`
 }
 
+/**
+ * Where to insert an image paragraph and where the cursor goes after it.
+ * Never glues the image to the previous line: on a deck made only of the
+ * starter comment, that would keep the line a comment and hide the image.
+ */
+export function imageInsertion(source, at, markup) {
+  const value = String(source ?? '')
+  const position = Math.max(0, Math.min(Number(at) || 0, value.length))
+  const before = value.slice(0, position)
+  const after = value.slice(position)
+  const lead =
+    position === 0 ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n'
+  let insert = `${lead}${markup}`
+  let pos
+  if (after.startsWith('\n')) {
+    pos = position + insert.length + 1
+  } else {
+    insert += '\n'
+    pos = position + insert.length
+  }
+  return { at: position, insert, pos }
+}
+
 const SEARCH_URL = 'https://api.openverse.org/v1/images/'
 const CACHE_LIMIT = 50
 const cache = new Map()
