@@ -3,112 +3,64 @@
 [![deploy](https://github.com/dbeley/ardoise/actions/workflows/deploy.yml/badge.svg)](https://github.com/dbeley/ardoise/actions/workflows/deploy.yml)
 [![license](https://img.shields.io/github/license/dbeley/ardoise)](LICENSE)
 
-**[Try it online](https://dbeley.github.io/ardoise/)** - nothing to install, the demo deck
-loads by itself.
+**[Try it online](https://dbeley.github.io/ardoise/)** - nothing to install.
 
-A **keyboard-driven** presentation stage: a markdown deck, one cursor, a command
-palette and speaker notes, in a single window.
-
-Built for videos where you **type while you talk**. Presenting and editing are not two
-screens: it is the same cursor, at two granularities.
+A keyboard-driven, **modal** presentation stage. The deck is a plain markdown file:
+edit it live, with Vim keybindings, while you present. Speaker notes open in a second
+window.
 
 ```
-j k      paragraph        i        write in place        w b e    word by word
-space    next step        esc      back to the cursor    .        black screen
+j k       paragraph        i        insert          esc   normal mode
+space     next step        d w      delete word     :     commands
 ```
 
-## Getting started
+## Modal editing
 
-```bash
-npm install
-npm run dev        # http://localhost:5173
-npm run build      # static dist/, openable anywhere
-npm run preview    # serves dist/
-npm test           # no browser: blocks, editing, motions, live preview
-```
+Ardoise is modal, like Vim:
 
-On NixOS: `nix develop` (Node 22 provided), then the same commands.
+- **normal mode**: keys are commands (motions, operators, stage controls);
+- **insert mode** (`i`, `a`, `A`, `I`, `O`): keys type into the text, still rendered;
+- **`esc`** always brings you back to normal mode.
 
-The app starts on a blank deck with a one-line hint. `:tutor` opens the tutorial
-(`decks/tutor.md`), which also documents the format.
-Drop any `.md` file on the window to present it.
-
-## One mode
-
-There is no reading screen and no editing screen: **the text on screen is the
-document**. The cursor lives inside it, and the formatting is already applied.
-
-- **`j` / `k`** walk down and up, **paragraph** by paragraph. In a finished
-  presentation a paragraph is a step: navigation *is* the pacing of the slides.
-- **`w` `b` `e` `h` `l` `0` `$`** refine down to the word and the character, with
-  counts (`3w`, `2x`, `d2w`).
-- **`i` `a` `A` `I` `O`** type directly into that styled text.
-- **`esc`** returns to the cursor.
-
-Markdown is not another world: the syntax (`##`, `**`, `-`, links) is **hidden
-everywhere and reappears on the cursor's line**. You can fix a stray `**` without
-leaving the rendered view, and closing the pair makes the bold appear immediately.
-
-Blocks that are not inline text (code, tables, diagrams, callouts) stay as styled
-source: that is the price of exactness, and the cursor can enter them like anywhere
-else.
-
-Content after a `<!-- pause -->` is **dimmed** until you reach it: still readable and
-editable, but you can see how far the reveal has gone.
-
-`u` undoes the last edit. `s` downloads the current deck.
-
-## The keyboard
+Markdown stays the source. The syntax (`##`, `**`, `-`, links) is hidden outside the
+cursor's line and reappears when you edit it. Code, tables and diagrams stay visible as
+styled source: the cursor enters them like any other block.
 
 | key | gesture |
 |---|---|
 | `j` / `k` | next / previous paragraph |
-| `space` | next step (group), then next slide |
+| `space` | next step, then next slide |
 | `n` / `p` | next / previous slide |
-| `3` `G` | jump to paragraph 3 |
-| `gg` / `G` | start / end of deck |
 | `h` `l` | character |
 | `w` `b` `e` | next word, previous word, word end |
 | `0` `$` | start / end of line |
 | `↑` `↓` | line inside the block |
-| `i` `a` `A` `I` | type: before, after, end of line, start of line |
-| `O` | new paragraph after |
+| `gg` / `G` | first / last paragraph of the slide |
+| `3` `G` | go to slide 3 |
+| `i` `a` `A` `I` | insert: before, after, end of line, start of line |
+| `O` | new paragraph after the current block |
 | `x` | delete a character |
-| `d` + motion | delete (`dw`, `de`, `d$`, `dd`) |
+| `d` + motion | delete (`dw`, `de`, `d0`, `d$`) |
+| `d` `d` | delete the whole block |
 | `c` + motion | change (`cw`, `cc`) |
 | `u` | undo |
-| `esc` | back to the cursor (normal mode) |
-| `.` | black screen (any key brings it back) |
-| `o` | overview (`h j k l`, `enter`) |
+| `esc` | back to normal mode |
+| `.` | black screen |
+| `o` | overview |
 | `t` | timer start / stop |
 | `f` | fullscreen |
 | `P` | speaker window |
 | `s` | download the deck |
 | `:` | command palette |
-| `+` / `-` | text size (5% steps) |
+| `+` / `-` | text size |
 | `?` | keyboard help |
 
-`j`/`k` are deliberately the paragraph, not the line: that is what makes navigation
-and pacing the same gesture. Inner lines are reached with `↑`/`↓`.
+Counts work on motions and operators: `3w`, `2x`, `d2w`.
 
-## Import and export
+## The deck is markdown
 
-The app is a static site: your files never leave the browser, there is no account and
-no server.
-
-| gesture | effect |
-|---|---|
-| drop a `.md` on the window | open it |
-| `:open` | pick a markdown file |
-| `:open https://.../deck.md` | import from a URL (if the server allows CORS) |
-| `?deck=./deck.md` | load a deck at startup |
-| `s` | download the current deck as markdown |
-| `:export` | PDF through the browser print dialog |
-
-Edits are kept in `localStorage`: you can close the tab and get your slide back.
-`:new` (or `:reset`) starts over from a blank deck; `:tutor` opens the tutorial.
-
-## Deck format
+A deck is one markdown file. Frontmatter is optional; `---` starts a new slide; a
+`<!-- pause -->` splits a slide into steps.
 
 ```markdown
 ---
@@ -127,44 +79,55 @@ theme: ardoise
 <!-- pause -->
 - revealed on the next step
 
-<!-- note: to say out loud, never shown on stage -->
+<!-- note: said out loud, never shown on stage -->
 ```
 
 | syntax | effect |
 |---|---|
-| `---` alone on a line | separates two slides (ignored inside code blocks) |
-| `<!-- pause -->` | reveals the rest on the next step |
-| `<!-- note: ... -->` | speaker note, visible only in the `P` window |
-| `<!-- layout: center -->` | centres the slide vertically |
-| `::: key` ... `:::` | callout (variants: `key`, `warn`, `ok`, `note`, `quote`) |
-| ```` ```mermaid ```` | diagram rendered on output |
+| `---` alone on a line | new slide (ignored inside code blocks) |
+| `<!-- pause -->` | reveal the rest on the next step, dimmed until then |
+| `<!-- note: ... -->` | speaker note, shown only in the `P` window |
+| `<!-- layout: center -->` | centre the slide vertically |
+| `::: key` ... `:::` | callout (`key`, `warn`, `ok`, `note`, `quote`) |
+| ```` ```mermaid ```` | diagram |
 | ```` ```nix ```` | syntax highlighting (js, ts, bash, nix, rust, python, json, yaml, css, html, go, c, diff, toml) |
 
-Plain HTML comments are dropped from the rendering. A slide is split into **blocks**
-(headings, paragraphs, lists, fences, callouts, tables): that is the unit of the
-cursor and of editing.
+HTML comments stay in the markdown but never reach the rendered output (overview,
+print, speaker notes). A slide is split into **blocks** (headings, paragraphs, lists,
+code, callouts, tables); the block is the unit of the cursor, of navigation and of
+`dd`/`cc`.
 
-## Speaker window
+## Speaker notes
 
-`P` opens a second window (put it on the other screen, outside the capture) showing:
+`P` opens a second window for the other screen: the current notes in large type, the
+position, the step count, the timer, and the title of the next slide. It stays in sync
+through `BroadcastChannel`; no server, no account.
 
-- the **notes** for the current slide, in large type;
-- the position, the step count, the timer, the clock;
-- the title of the **next** slide.
+## Files, commands, settings
 
-Synchronisation goes through `BroadcastChannel`: same origin, no server, no account.
-If the window opens later, it catches up on the first change.
+| gesture | effect |
+|---|---|
+| drop a `.md` on the window | open it |
+| `:open` | pick a markdown file |
+| `:open https://.../deck.md` | import from a URL (if CORS allows) |
+| `?deck=./deck.md` | load a deck at startup |
+| `:new` / `:reset` | start over from a blank deck |
+| `:tutor` | open the tutorial |
+| `:paragraph` | new paragraph after the current block |
+| `s` | download the deck as markdown |
+| `:export` | PDF through the browser print dialog |
+| `:theme nord` | palette: `ardoise`, `paper`, `gruvbox`, `nord` |
+| `:size 120`, `:size reset` | text size, 80% to 160% |
+
+A deck can set its own `theme:` in the frontmatter. The deck as edited, the theme, the
+last slide and the text size are kept in `localStorage`; nothing leaves the browser.
+First launch opens a blank deck with a one-line hint.
 
 ## Recording (OBS)
 
-- `?raw=1` hides the stage footer **and the paragraph marker**: the capture only sees
-  the slide.
-- Browser source, 1920x1080, on `http://localhost:5173/?raw=1`.
-- `f` for fullscreen if you capture the screen rather than the browser.
-- `screenkey` (or the OBS keystroke overlay) makes the shortcuts readable - that is
-  what gives the "typing live" genre its legibility.
-
-Useful URL parameters:
+- `?raw=1` hides the stage footer and the paragraph marker.
+- Use `http://localhost:5173/?raw=1` as a browser source, 1920x1080; `f` for fullscreen.
+- `screenkey` (or an OBS keystroke overlay) makes the shortcuts readable.
 
 | parameter | effect |
 |---|---|
@@ -174,41 +137,17 @@ Useful URL parameters:
 | `?deck=/path/deck.md` | load a deck from a URL |
 | `?presenter=1` | open the speaker window directly |
 
-## Theme and text size
+## Development
 
-Four palettes: `ardoise` (default, dark), `paper` (light), `gruvbox`, `nord`.
-
-```
-:theme nord        # pick a palette
-:theme             # cycle to the next
-:size 120          # text size at 120%
-:size +            # +5%
-:size reset        # back to 100%
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # static dist/
+npm run preview    # serves dist/
+npm test           # no browser: blocks, editing, motions, live preview
 ```
 
-On the keyboard, `+` and `-` change the size in 5% steps (80% to 160%).
-
-**A deck can declare its own palette** in its YAML header:
-
-```yaml
----
-title: My talk
-theme: paper
----
-```
-
-It applies when the deck loads (a `?theme=` in the URL still wins). A choice made
-afterwards with `:theme` is remembered for the session and beyond.
-
-Text size only affects the stage (headings, paragraphs, code, the edited source): the
-stage footer and the overlays keep their size, so they stay discreet on screen. Both
-settings are kept in `localStorage`.
-
-## What is remembered
-
-In `localStorage`: the deck as edited, the theme, the last slide, the text size.
-`:new` (or `:reset`) starts over from a blank deck. `:tutor` opens the tutorial.
-Nothing leaves the browser.
+On NixOS: `nix develop` (Node 22 provided), then the same commands.
 
 ## Architecture
 
@@ -240,25 +179,20 @@ tests/                    node-only checks for the core and the live preview
 Two principles hold it together:
 
 1. **the `KEYMAP` table** in `lib/keys.js` feeds both the event handler and the `?`
-   help: the help cannot lie about behaviour;
+   help, so the help cannot lie about behaviour;
 2. **editing replaces lines**: every block knows its range in the markdown, so an edit
    never rewrites the file - notes and pauses stay intact.
 
-## Known limits
+## Limits
 
-- **No backend**: the "terminal" is a command palette, not a real shell. A real pty
-  would need a server; here everything is static and offline.
-- **PDF**: `:export` goes through the browser print dialog ("Save as PDF"), every slide
-  unfolded, one per page.
-- **Mermaid** is loaded on demand (about 1 MB) and only when a diagram exists.
-- **The speaker window** can be blocked by a pop-up blocker: allow the site.
-- **The editor is CodeMirror 6** (about 90 kB gzipped): that is what makes selection,
-  IME and undo reliable. The stage and the PDF do not use the same renderer, so a
-  detail can differ between the two.
-- **No rich rendering of blocks** (code, tables, diagrams): they show as styled source
-  while editing.
-- **No visual selection** (`v`), no internal clipboard (`y`/`p`).
-- **No multi-screen sync** beyond the notes: a single stage drives everything.
+- **No backend**: `:` is a command palette, not a real shell; everything is static and
+  offline.
+- **`dd`/`cc` work on a block**, not a line; inner lines are reached with `↑`/`↓`.
+- **Blocks are shown as styled source** (code, tables, diagrams) while editing.
+- **PDF** goes through the browser print dialog ("Save as PDF"), one slide per page.
+- **Mermaid** loads on demand (about 1 MB) and only when a diagram exists.
+- **The speaker window** can be blocked by a pop-up blocker.
+- **No visual selection** (`v`) and no internal clipboard (`y`/`p`).
 
 ## License
 
