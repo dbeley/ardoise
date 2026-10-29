@@ -1,5 +1,5 @@
 /**
- * Image checks (no browser): markup parsing and formatting.
+ * Image checks (no browser): markup parsing, formatting and the search client.
  *
  *   node tests/images.test.mjs
  */
@@ -9,12 +9,13 @@ import {
   parseImageAlt,
   parseImageLine,
   imageMarkdown,
+  searchImages,
 } from '../src/lib/images.js'
 
 let passed = 0
-const test = (name, fn) => {
+const test = async (name, fn) => {
   try {
-    fn()
+    await fn()
     passed += 1
     console.log(`  ok   ${name}`)
   } catch (error) {
@@ -23,7 +24,7 @@ const test = (name, fn) => {
   }
 }
 
-test('a width is a percentage between 25 and 100', () => {
+await test('a width is a percentage between 25 and 100', () => {
   assert.equal(parseWidth('60%'), 60)
   assert.equal(parseWidth('25%'), 25)
   assert.equal(parseWidth('100%'), 100)
@@ -32,14 +33,14 @@ test('a width is a percentage between 25 and 100', () => {
   assert.equal(parseWidth('60'), null)
 })
 
-test('alt and width split on the last bar', () => {
+await test('alt and width split on the last bar', () => {
   assert.deepEqual(parseImageAlt('A cat|60%'), { alt: 'A cat', width: 60 })
   assert.deepEqual(parseImageAlt('A cat'), { alt: 'A cat', width: null })
   assert.deepEqual(parseImageAlt('a|b|60%'), { alt: 'a|b', width: 60 })
   assert.deepEqual(parseImageAlt('a|b'), { alt: 'a|b', width: null })
 })
 
-test('an image line is parsed', () => {
+await test('an image line is parsed', () => {
   assert.deepEqual(parseImageLine('![A cat|60%](https://x/y.jpg)'), {
     alt: 'A cat',
     src: 'https://x/y.jpg',
@@ -50,10 +51,65 @@ test('an image line is parsed', () => {
   assert.equal(parseImageLine(''), null)
 })
 
-test('markdown keeps the width only when it is not 100', () => {
+await test('markdown keeps the width only when it is not 100', () => {
   assert.equal(imageMarkdown({ alt: 'A cat', src: 'u', width: 60 }), '![A cat|60%](u)')
   assert.equal(imageMarkdown({ alt: 'A cat', src: 'u', width: 100 }), '![A cat](u)')
   assert.equal(imageMarkdown({ alt: '', src: 'u' }), '![](u)')
+})
+
+const payload = {
+  results: [
+    {
+      id: '1',
+      title: 'A cat',
+      url: 'https://x/y.jpg',
+      thumbnail: 'https://x/t.jpg',
+      creator: 'Jane',
+      license: 'by',
+      license_version: '4.0',
+      foreign_landing_url: 'https://x/page',
+      width: 800,
+      height: 600,
+    },
+  ],
+}
+const fakeFetch = (status = 200, body = payload) => {
+  let calls = 0
+  const impl = async () => {
+    calls += 1
+    return { ok: status < 400, status, json: async () => body }
+  }
+  impl.calls = () => calls
+  return impl
+}
+
+await test('results are normalised', async () => {
+  const [result] = await searchImages('cat', { fetchImpl: fakeFetch() })
+  assert.equal(result.title, 'A cat')
+  assert.equal(result.src, 'https://x/y.jpg')
+  assert.equal(result.width, 800)
+  assert.equal(result.license, 'BY')
+})
+
+await test('a one-letter query does not search', async () => {
+  const impl = fakeFetch()
+  assert.deepEqual(await searchImages('c', { fetchImpl: impl }), [])
+  assert.equal(impl.calls(), 0)
+})
+
+await test('a query is cached', async () => {
+  const impl = fakeFetch()
+  const query = `cached-${Math.random()}`
+  await searchImages(query, { fetchImpl: impl })
+  await searchImages(query, { fetchImpl: impl })
+  assert.equal(impl.calls(), 1)
+})
+
+await test('a 429 is a rate limit', async () => {
+  await assert.rejects(
+    () => searchImages(`limited-${Math.random()}`, { fetchImpl: fakeFetch(429, {}) }),
+    (error) => error.kind === 'rate-limit'
+  )
 })
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)
