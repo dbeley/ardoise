@@ -9,6 +9,7 @@
  */
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js/lib/core'
+import { parseImageAlt } from './images.js'
 
 import javascript from 'highlight.js/lib/languages/javascript'
 import typescript from 'highlight.js/lib/languages/typescript'
@@ -96,6 +97,16 @@ function buildMarkdown() {
 
     const label = lang || 'text'
     return `<div class="code" data-lang="${label}"><pre><code class="hljs">${highlighted}</code></pre></div>`
+  }
+
+  md.renderer.rules.image = (tokens, idx, options, env, self) => {
+    const token = tokens[idx]
+    const rawAlt = self.renderInlineAsText(token.children, options, env)
+    const { alt, width } = parseImageAlt(rawAlt)
+    token.attrSet('alt', alt)
+    token.attrSet('loading', 'lazy')
+    if (width) token.attrSet('style', `width:${width}%`)
+    return self.renderToken(tokens, idx, options)
   }
 
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
