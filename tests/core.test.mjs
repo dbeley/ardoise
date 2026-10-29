@@ -81,12 +81,16 @@ test('a code block stays a single block', () => {
   assert.equal(blocks.length, 2)
   assert.equal(blocks[0].kind, 'fence')
   assert.ok(blocks[0].text.includes('a = 1;'))
+  // the range must cover the closing fence, not just the opening line:
+  // `O` and `dd` rely on it to target the whole block.
+  assert.deepEqual([blocks[0].startLine, blocks[0].endLine], [0, 4])
 })
 
 test('a callout stays a single block', () => {
   const { blocks } = scanBlocks('::: key\nsome text\n:::')
   assert.equal(blocks.length, 1)
   assert.equal(blocks[0].kind, 'box')
+  assert.deepEqual([blocks[0].startLine, blocks[0].endLine], [0, 2])
 })
 
 /* ---------------- source editing ---------------- */

@@ -122,6 +122,7 @@ export function scanBlocks(raw) {
 
     if (fenceChar) {
       current.lines.push(line)
+      current.endLine = i
       if (new RegExp(`^\\s*${fenceChar}{3,}\\s*$`).test(line)) {
         fenceChar = null
         push()
@@ -138,6 +139,7 @@ export function scanBlocks(raw) {
 
     if (inBox) {
       current.lines.push(line)
+      current.endLine = i
       if (/^\s*:::\s*$/.test(line)) {
         inBox = false
         push()
