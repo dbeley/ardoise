@@ -13,7 +13,8 @@
   import CommandBar from './components/CommandBar.svelte'
   import HelpOverlay from './components/HelpOverlay.svelte'
   import Overview from './components/Overview.svelte'
-  import welcome from '../decks/bienvenue.md?raw'
+  import starter from '../decks/starter.md?raw'
+  import tutorial from '../decks/tutor.md?raw'
 
   const THEMES = ['ardoise', 'paper', 'gruvbox', 'nord']
   const params = new URLSearchParams(location.search)
@@ -21,7 +22,7 @@
 
   /* ---------- state ---------- */
 
-  let source = $state(storage.deckSource() || welcome)
+  let source = $state(storage.deckSource() ?? starter)
   let deck = $derived(parseDeck(source))
 
   let slideIndex = $state(0)
@@ -512,9 +513,13 @@
     if (file) loadFile(file)
   }
 
-  function resetAll() {
+  function newDeck() {
     storage.clearDeckSource()
-    adoptDeck(welcome, 'back to the demo deck')
+    adoptDeck('', 'blank deck')
+  }
+
+  function openTutorial() {
+    adoptDeck(tutorial, 'tutorial loaded')
   }
 
   async function toggleFullscreen() {
@@ -585,7 +590,9 @@
     { id: 'step', key: 'step', label: 'next step (segment)', run: nextStep },
     { id: 'slide', key: 'slide 7', label: 'go to slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
     { id: 'edit', key: 'edit', label: 'type here (insert mode)', run: () => setMode('insert') },
-    { id: 'new', key: 'new', label: 'new paragraph', run: newParagraph },
+    { id: 'new', key: 'new', label: 'blank deck', run: newDeck },
+    { id: 'paragraph', key: 'paragraph', label: 'new paragraph', run: newParagraph },
+    { id: 'tutor', key: 'tutor', label: 'open the tutorial', run: openTutorial },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {
         const argument = q.split(/\s+/)[1]
@@ -606,7 +613,7 @@
     { id: 'export', key: 'export', label: 'export as PDF (print)', run: exportPdf },
     { id: 'undo', key: 'undo', label: 'undo the last edit', run: undo },
     { id: 'raw', key: 'raw', label: 'hide the stage footer (OBS)', run: () => { raw = !raw; showToast(raw ? 'capture mode' : 'stage footer visible') } },
-    { id: 'reset', key: 'reset', label: 'back to the demo deck', run: resetAll },
+    { id: 'reset', key: 'reset', label: 'start over from a blank deck', run: newDeck },
     { id: 'help', key: 'help', label: 'keyboard help', run: () => (mode = 'help') },
   ])
 

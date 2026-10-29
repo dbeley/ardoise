@@ -198,7 +198,7 @@ The capture only sees the slide. The cursor stays your business.
 
 ## Over to you
 
-Drop your own `.md` file on this window, or replace `decks/bienvenue.md`.
+Drop your own `.md` file on this window, or start over with `:new`.
 
 <!-- pause -->
 

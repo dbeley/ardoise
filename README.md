@@ -29,7 +29,8 @@ npm test           # no browser: blocks, editing, motions, live preview
 
 On NixOS: `nix develop` (Node 22 provided), then the same commands.
 
-The app starts on a demo deck (`decks/bienvenue.md`) that also documents the format.
+The app starts on a blank deck with a one-line hint. `:tutor` opens the tutorial
+(`decks/tutor.md`), which also documents the format.
 Drop any `.md` file on the window to present it.
 
 ## One mode
@@ -105,7 +106,7 @@ no server.
 | `:export` | PDF through the browser print dialog |
 
 Edits are kept in `localStorage`: you can close the tab and get your slide back.
-`:reset` returns to the demo deck.
+`:new` (or `:reset`) starts over from a blank deck; `:tutor` opens the tutorial.
 
 ## Deck format
 
@@ -206,7 +207,8 @@ settings are kept in `localStorage`.
 ## What is remembered
 
 In `localStorage`: the deck as edited, the theme, the last slide, the text size.
-`:reset` returns to the demo deck. Nothing leaves the browser.
+`:new` (or `:reset`) starts over from a blank deck. `:tutor` opens the tutorial.
+Nothing leaves the browser.
 
 ## Architecture
 
