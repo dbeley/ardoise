@@ -1,30 +1,13 @@
 <script>
+  import { matchCommands } from '../lib/palette.js'
+
   let { open = false, commands = [], onrun, onclose } = $props()
 
   let query = $state('')
   let cursor = $state(0)
   let input = $state(null)
 
-  let filtered = $derived.by(() => {
-    const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
-    if (!words.length) return commands
-
-    const strict = commands.filter((command) =>
-      words.every((word) => `${command.key} ${command.label}`.toLowerCase().includes(word))
-    )
-    if (strict.length) return strict
-
-    // `theme paper`: the first word picks the command, the rest is passed
-    // to it as an argument.
-    const head = words[0]
-    return commands
-      .filter(
-        (command) =>
-          command.key.toLowerCase().split(' ')[0].startsWith(head) ||
-          command.label.toLowerCase().startsWith(head)
-      )
-      .slice(0, 1)
-  })
+  let filtered = $derived(matchCommands(commands, query))
 
   $effect(() => {
     if (!open) return
