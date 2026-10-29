@@ -481,6 +481,9 @@
   }
 
   function adoptDeck(value, label) {
+    // A pending write from the previous deck would land on the new one.
+    clearTimeout(writeTimer)
+    writeTimer = null
     source = value
     slideIndex = 0
     docText = ''
