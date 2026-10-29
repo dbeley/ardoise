@@ -170,6 +170,12 @@ test('e reaches the end of the word', () => {
   assert.equal(wordEnd(text, 12), 16)
 })
 
+test('the e motion leaves the caret after the word', () => {
+  assert.equal(move(text, 0, 'e'), 5)
+  assert.equal(move(text, 5, 'e'), 11)
+  assert.equal(move(text, 11, 'e'), text.length)
+})
+
 test('h and l move one character, without leaving', () => {
   assert.equal(move(text, 0, 'h'), 0)
   assert.equal(move(text, 3, 'l'), 4)

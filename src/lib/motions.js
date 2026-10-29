@@ -113,7 +113,9 @@ export function move(text, pos, motion, count = 1) {
         i = prevWordStart(text, i)
         break
       case 'e':
-        i = wordEnd(text, i)
+        // `wordEnd` returns the index of the word's last character; the caret
+        // is drawn before the character at its offset, so land just after it.
+        i = Math.min(text.length, wordEnd(text, i) + 1)
         break
       case '0':
         i = lineStart(text, i)
