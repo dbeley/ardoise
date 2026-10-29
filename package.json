@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "description": "Scène de présentation pilotée au clavier - deck markdown, saisie en direct, tout-en-un.",
+  "description": "Keyboard-driven presentation stage - markdown deck, live editing, all in one window.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

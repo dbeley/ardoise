@@ -1,60 +1,59 @@
 /**
- * keys.js - source unique de vérité du clavier.
- * La même table alimente le gestionnaire d'événements et l'aide (`?`),
- * donc l'aide ne peut pas diverger du comportement réel.
+ * keys.js - the single source of truth for the keyboard.
+ * The same table feeds the event handler and the `?` help, so the help cannot
+ * drift from the real behaviour.
  *
- * Modèle : un seul curseur dans le deck. Le paragraphe est l'unité de
- * navigation (donc l'unité de tournage) ; le mot et le caractère sont les
- * unités d'édition.
+ * Model: one cursor inside the deck. The paragraph is the unit of navigation
+ * (and therefore of pacing); word and character are the units of editing.
  */
 
 export const KEYMAP = [
   {
-    group: 'Se déplacer',
+    group: 'Move',
     items: [
-      { keys: ['j', 'k'], label: 'paragraphe suivant / précédent' },
-      { keys: ['espace'], label: 'pas suivant (segment, puis slide)' },
-      { keys: ['n', 'p'], label: 'slide suivante / précédente' },
-      { keys: ['3', 'G'], label: 'aller au paragraphe 3' },
-      { keys: ['gg', 'G'], label: 'début / fin du deck' },
+      { keys: ['j', 'k'], label: 'next / previous paragraph' },
+      { keys: ['espace'], label: 'next step (segment, then slide)' },
+      { keys: ['n', 'p'], label: 'next / previous slide' },
+      { keys: ['3', 'G'], label: 'jump to paragraph 3' },
+      { keys: ['gg', 'G'], label: 'start / end of deck' },
     ],
   },
   {
-    group: 'Dans le paragraphe',
+    group: 'Inside a paragraph',
     items: [
-      { keys: ['h', 'l'], label: 'caractère' },
-      { keys: ['w', 'b', 'e'], label: 'mot suivant, précédent, fin' },
-      { keys: ['0', '$'], label: 'début / fin de ligne' },
-      { keys: ['↑', '↓'], label: 'ligne à l’intérieur du bloc' },
-      { keys: ['2', 'w'], label: 'compteur sur un mouvement' },
+      { keys: ['h', 'l'], label: 'character' },
+      { keys: ['w', 'b', 'e'], label: 'next word, previous word, word end' },
+      { keys: ['0', '$'], label: 'start / end of line' },
+      { keys: ['↑', '↓'], label: 'line inside the block' },
+      { keys: ['2', 'w'], label: 'count on a motion' },
     ],
   },
   {
-    group: 'Éditer sur place',
+    group: 'Edit in place',
     items: [
-      { keys: ['i'], label: 'écrire dans le texte (insertion)' },
-      { keys: ['a', 'A'], label: 'écrire après / en fin de ligne' },
-      { keys: ['I'], label: 'écrire en début de ligne' },
-      { keys: ['O'], label: 'nouveau paragraphe après' },
-      { keys: ['x'], label: 'supprimer le caractère' },
-      { keys: ['d', 'w'], label: 'supprimer (d + mouvement)' },
-      { keys: ['c', 'w'], label: 'changer (c + mouvement)' },
-      { keys: ['u'], label: 'annuler' },
-      { keys: ['échap'], label: 'revenir au curseur (mode normal)' },
+      { keys: ['i'], label: 'type into the text (insert)' },
+      { keys: ['a', 'A'], label: 'type after / at end of line' },
+      { keys: ['I'], label: 'type at start of line' },
+      { keys: ['O'], label: 'new paragraph after' },
+      { keys: ['x'], label: 'delete character' },
+      { keys: ['d', 'w'], label: 'delete (d + motion)' },
+      { keys: ['c', 'w'], label: 'change (c + motion)' },
+      { keys: ['u'], label: 'undo' },
+      { keys: ['esc'], label: 'back to the cursor (normal mode)' },
     ],
   },
   {
-    group: 'Scène',
+    group: 'Stage',
     items: [
-      { keys: ['.'], label: 'écran noir' },
-      { keys: ['o'], label: 'vue d’ensemble' },
-      { keys: ['t'], label: 'chrono marche / arrêt' },
-      { keys: ['f'], label: 'plein écran' },
-      { keys: ['P'], label: 'fenêtre orateur' },
-      { keys: ['s'], label: 'télécharger le deck' },
-      { keys: [':'], label: 'palette de commandes' },
-      { keys: ['+', '-'], label: 'taille du texte' },
-      { keys: ['?'], label: 'cette aide' },
+      { keys: ['.'], label: 'black screen' },
+      { keys: ['o'], label: 'overview' },
+      { keys: ['t'], label: 'timer start / stop' },
+      { keys: ['f'], label: 'fullscreen' },
+      { keys: ['P'], label: 'speaker window' },
+      { keys: ['s'], label: 'download the deck' },
+      { keys: [':'], label: 'command palette' },
+      { keys: ['+', '-'], label: 'text size' },
+      { keys: ['?'], label: 'this help' },
     ],
   },
 ]
@@ -68,13 +67,13 @@ export const KEY_ALIASES = {
   ArrowUp: '↑',
   PageDown: 'n',
   PageUp: 'p',
-  Enter: 'entrée',
-  Escape: 'échap',
+  Enter: 'enter',
+  Escape: 'esc',
 }
 
 export function normalizeKey(event) {
   if (event.key === ' ') return 'espace'
-  if (event.key === 'Esc') return 'échap'
+  if (event.key === 'Esc') return 'esc'
   return KEY_ALIASES[event.key] || event.key
 }
 

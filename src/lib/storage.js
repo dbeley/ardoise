@@ -1,7 +1,7 @@
 /**
  * storage.js - persistance locale (aucun serveur).
- * Tout est best-effort : un navigateur en navigation privée ne doit pas
- * empêcher l'application de démarrer.
+ * Everything is best-effort: a private-mode browser must never prevent the app
+ * from starting.
  */
 const NS = 'ardoise:v1'
 
@@ -19,7 +19,7 @@ function write(key, value) {
     if (value === null || value === undefined) localStorage.removeItem(`${NS}:${key}`)
     else localStorage.setItem(`${NS}:${key}`, JSON.stringify(value))
   } catch {
-    /* quota / mode privé : on ignore */
+    /* quota / private mode: ignore */
   }
 }
 

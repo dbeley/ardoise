@@ -30,7 +30,7 @@
   {/if}
   <span class="chrome-right">
     {#if mode !== 'present'}
-      <span class="chrome-mode">{mode === 'compose' ? 'saisie live' : mode}</span>
+      <span class="chrome-mode">{mode}</span>
       <span class="chrome-dot">·</span>
     {/if}
     <span class="chrome-timer is-running:{running}">{clock(elapsed)}</span>

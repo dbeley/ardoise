@@ -1,5 +1,5 @@
 {
-  description = "ardoise - scène de présentation pilotée au clavier";
+  description = "ardoise - a keyboard-driven presentation stage";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

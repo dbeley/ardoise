@@ -35,14 +35,14 @@
 </script>
 
 <svelte:head>
-  <title>orateur - ardoise</title>
+  <title>speaker - ardoise</title>
 </svelte:head>
 
 <div class="presenter">
   <header class="presenter-head">
     <span class="presenter-deck">{payload?.deckTitle ?? 'ardoise'}</span>
     <span class="presenter-status" class:is-live={live}>
-      {live ? '● en direct' : '○ en attente'}
+      {live ? '● live' : '○ waiting'}
     </span>
     <span class="presenter-clock">{time}</span>
   </header>
@@ -54,7 +54,7 @@
         <p>{payload.note}</p>
       {:else}
         <p class="presenter-empty">
-          {payload ? 'pas de note pour cette slide.' : 'lance la présentation dans l’autre fenêtre.'}
+          {payload ? 'no note for this slide.' : 'start the presentation in the other window.'}
         </p>
       {/if}
     </section>
@@ -64,31 +64,31 @@
         <h3>slide</h3>
         <p class="presenter-big">{payload ? `${payload.index + 1} / ${payload.total}` : '-'}</p>
         {#if payload?.steps > 1}
-          <p class="presenter-small">pas {payload.step + 1} / {payload.steps}</p>
+          <p class="presenter-small">step {payload.step + 1} / {payload.steps}</p>
         {/if}
       </div>
 
       <div class="presenter-card">
-        <h3>chrono</h3>
+        <h3>timer</h3>
         <p class="presenter-big" class:is-running={payload?.running}>
           {clock(payload?.elapsed)}
         </p>
       </div>
 
       <div class="presenter-card">
-        <h3>actuelle</h3>
+        <h3>current</h3>
         <p class="presenter-title">{payload?.title ?? '-'}</p>
       </div>
 
       <div class="presenter-card">
-        <h3>suivante</h3>
+        <h3>next</h3>
         <p class="presenter-title is-dim">{payload?.next || 'fin du deck'}</p>
       </div>
     </aside>
   </main>
 
   <footer class="presenter-foot">
-    <span>cette fenêtre ne sert qu’à toi - ne pas capturer dans OBS</span>
+    <span>this window is for you only - do not capture it in OBS</span>
   </footer>
 </div>
 

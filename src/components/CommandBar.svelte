@@ -14,8 +14,8 @@
     )
     if (strict.length) return strict
 
-    // `theme paper` : le premier mot suffit à choisir la commande,
-    // le reste est passé en argument à son exécution.
+    // `theme paper`: the first word picks the command, the rest is passed
+    // to it as an argument.
     const head = words[0]
     return commands
       .filter(
@@ -39,7 +39,7 @@
 
   function run(index) {
     const command = filtered[index]
-    // Pas de correspondance : App retombe sur `:12` (aller à la slide 12).
+    // No match: App falls back to `:12` (go to slide 12).
     onrun?.(command, query.trim())
   }
 
@@ -88,7 +88,7 @@
         spellcheck="false"
         autocomplete="off"
         placeholder="slide, theme, edit, timer, export…"
-        aria-label="Commande"
+        aria-label="Command"
         onkeydown={onkeydown}
       />
     </form>
@@ -109,7 +109,7 @@
         </li>
       {/each}
       {#if filtered.length === 0}
-        <li class="command-item"><em style="font-style:normal">aucune commande</em></li>
+        <li class="command-item"><em style="font-style:normal">no matching command</em></li>
       {/if}
     </ul>
   </div>

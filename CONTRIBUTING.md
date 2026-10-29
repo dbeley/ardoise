@@ -1,45 +1,47 @@
-# Contribuer
+# Contributing
 
-## Mise en route
+## Getting set up
 
 ```bash
-nix develop        # Node 22 (ou n'importe quel Node >= 22.12)
+nix develop        # Node 22 (or any Node >= 22.12)
 npm ci
-npm test           # noyau : blocs, édition, mouvements
+npm test           # core: blocks, editing, motions, live preview
 npm run dev        # http://localhost:5173
 ```
 
-`npm test` est la barrière : toute modification de `src/lib/deck.js` ou
-`src/lib/motions.js` doit passer les 24 vérifications, et en ajouter une quand elle
-change un comportement.
+`npm test` is the gate: any change to `src/lib/deck.js`, `src/lib/motions.js` or
+`src/lib/livepreview.js` must keep the 40 checks green, and add one when it changes a
+behaviour.
 
-## Architecture en deux règles
+## Two architectural rules
 
-1. **`lib/keys.js` est la seule table de raccourcis.** Elle alimente à la fois le
-   gestionnaire d'événements et l'aide `?`. Ajouter une touche sans l'y déclarer casse
-   la promesse que l'aide dit la vérité.
-2. **Une édition remplace des lignes.** Un bloc connaît sa plage `startLine`-`endLine`
-   dans le markdown de la slide. Ne jamais raccourcir ce chemin en réécrivant la slide
-   entière : les notes `<!-- note: -->` et les `<!-- pause -->` doivent survivre.
+1. **`lib/keys.js` is the only key table.** It feeds both the event handler and the `?`
+   help. Adding a key without declaring it there breaks the promise that the help tells
+   the truth.
+2. **An edit replaces lines.** A block knows its `startLine`-`endLine` range in the
+   slide's markdown. Never shortcut that by rewriting the whole slide: `<!-- note: -->`
+   comments and `<!-- pause -->` markers must survive.
 
-## Périmètre
+A third one, specific to the editor: **decorations never hide the cursor's line**. Hiding
+syntax is fine everywhere else, but the line being edited must stay readable and
+editable.
 
-Dans le périmètre : le rendu markdown, le curseur et ses mouvements, l'export, les
-thèmes, l'accessibilité au clavier.
+## Scope
 
-Hors périmètre, volontairement : backend, comptes, collaboration temps réel,
-télémétrie, dépendance à un service tiers. Le projet doit rester un dossier statique
-qui fonctionne hors-ligne.
+In scope: markdown rendering, the cursor and its motions, editing, export, themes,
+keyboard accessibility.
+
+Deliberately out of scope: backend, accounts, real-time collaboration, telemetry, any
+third-party service. The project must stay a static folder that works offline.
 
 ## Style
 
-- Français pour le code, les commentaires, la documentation et les messages de commit
-  (l'interface et le public sont francophones).
-- Pas de tiret cadratin dans la prose : ` - `.
-- Les commentaires expliquent **pourquoi**, pas ce que le code fait déjà.
+- English for code, comments, documentation and commit messages.
+- No em dash in prose: use ` - `.
+- Comments explain **why**, not what the code already says.
 
 ## Pull requests
 
-Une PR = un comportement. Décris le geste observable (« `d` `w` supprime le mot sans
-laisser d'espace double »), pas la liste des fichiers touchés. La CI construit et
-déploie ; elle doit être verte.
+One PR, one behaviour. Describe the observable gesture ("`d` `w` deletes the word without
+leaving a double space"), not the list of files touched. CI builds and deploys; it must
+be green.

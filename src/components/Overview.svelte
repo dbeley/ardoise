@@ -8,16 +8,16 @@
   class="overlay"
   role="dialog"
   aria-modal="true"
-  aria-label="Vue d’ensemble"
+  aria-label="Overview"
   onclick={(event) => {
     if (event.target === event.currentTarget) onclose()
   }}
 >
   <div class="panel">
     <div class="panel-head">
-      <strong>vue d’ensemble</strong>
+      <strong>overview</strong>
       <span>{slides.length} slides</span>
-      <span style="margin-left:auto">h j k l · entrée · échap</span>
+      <span style="margin-left:auto">h j k l · enter · esc</span>
     </div>
     <div class="panel-body">
       <div class="overview-grid">
@@ -26,7 +26,7 @@
             class="thumb"
             class:is-active={i === cursor}
             type="button"
-            aria-label="Aller à la slide {i + 1} : {slide.title}"
+            aria-label="Go to slide {i + 1}: {slide.title}"
             onclick={() => onselect(i)}
           >
             <span class="thumb-index">{String(i + 1).padStart(2, '0')}</span>

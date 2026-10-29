@@ -1,9 +1,9 @@
 /**
- * editor.js - la surface d'édition : un document CodeMirror par slide.
+ * editor.js - the editing surface: one CodeMirror document per slide.
  *
- * Le document est le markdown de la slide courante. Les décorations
- * (`livepreview.js`) donnent le rendu ; le mode normal verrouille la frappe
- * (`readOnly`) et laisse notre keymap vim faire les modifications.
+ * The document is the current slide's markdown. Decorations (`livepreview.js`)
+ * provide the rendering; normal mode locks typing (`readOnly`) and lets our own
+ * vim keymap perform the edits.
  */
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state'
 import { EditorView, Decoration, drawSelection, keymap } from '@codemirror/view'
@@ -12,7 +12,7 @@ import { buildDecorations } from './livepreview.js'
 
 const readOnly = new Compartment()
 
-/** Position à partir de laquelle le contenu n'est pas encore "révélé". */
+/** Offset from which content has not been revealed yet. */
 export const setPendingAt = StateEffect.define()
 const pendingAt = StateField.define({
   create: () => Number.MAX_SAFE_INTEGER,
@@ -90,7 +90,7 @@ export function setReadOnly(view, value) {
   view.dispatch({ effects: readOnly.reconfigure(EditorState.readOnly.of(value)) })
 }
 
-/** Remplace tout le document (changement de slide) en repartant d'un état neuf. */
+/** Replace the whole document (slide change) with a fresh state. */
 export function setDocument(view, doc, options) {
   const fresh = createState(doc, options)
   view.setState(fresh)

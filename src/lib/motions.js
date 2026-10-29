@@ -1,9 +1,9 @@
 /**
- * motions.js - déplacements et opérateurs sur le texte d'un bloc.
+ * motions.js - cursor motions and operators over a block's text.
  *
- * Le bloc est une chaîne (le markdown brut du paragraphe). Toutes les
- * fonctions raisonnent en index de caractère dans cette chaîne, ce qui rend
- * l'édition exacte : on modifie le texte, pas le rendu.
+ * A block is a string (the paragraph's raw markdown). Every function works on
+ * character offsets in that string, which makes editing exact: we change the
+ * text, not the rendering.
  */
 
 const WORD_CHAR = /[\p{L}\p{N}_]/u
@@ -17,7 +17,7 @@ function charClass(ch) {
 
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
-/** Début du mot suivant (comportement de `w`). */
+/** Start of the next word (`w` behaviour). */
 export function nextWordStart(text, pos) {
   const n = text.length
   let i = clamp(pos, 0, n)
@@ -31,7 +31,7 @@ export function nextWordStart(text, pos) {
   return i
 }
 
-/** Début du mot précédent (comportement de `b`). */
+/** Start of the previous word (`b` behaviour). */
 export function prevWordStart(text, pos) {
   let i = clamp(pos, 0, text.length)
   if (i === 0) return 0
@@ -42,7 +42,7 @@ export function prevWordStart(text, pos) {
   return i
 }
 
-/** Fin du mot courant ou suivant (comportement de `e`). */
+/** End of the current or next word (`e` behaviour). */
 export function wordEnd(text, pos) {
   const n = text.length
   let i = clamp(pos, 0, n)
@@ -68,7 +68,7 @@ export function lineEnd(text, pos) {
   return found === -1 ? text.length : found
 }
 
-/** Colonne visuelle utilisée pour conserver l'alignement en j/k. */
+/** Visual column, kept across j/k moves. */
 export function columnOf(text, pos) {
   return clamp(pos, 0, text.length) - lineStart(text, pos)
 }
@@ -93,7 +93,7 @@ export function lineUp(text, pos, column = null) {
   return Math.min(prevStart + col, last)
 }
 
-/** Déplace le curseur selon un mouvement nommé. */
+/** Move the cursor along a named motion. */
 export function move(text, pos, motion, count = 1) {
   let i = clamp(pos, 0, text.length)
   let column = null
@@ -137,7 +137,7 @@ export function move(text, pos, motion, count = 1) {
 }
 
 /**
- * Plage [start, end) affectée par un opérateur (d, c) suivi d'un mouvement.
+ * Range [start, end) covered by an operator (d, c) followed by a motion.
  * `dd`/`cc` (motion === 'd') renvoie tout le bloc.
  */
 export function operatorRange(text, pos, motion, count = 1) {
@@ -197,7 +197,7 @@ export function deleteRange(text, from, to) {
 }
 
 /**
- * Entrée intelligente : dans une liste, prolonge la puce ; sinon nouvelle ligne.
+ * Smart newline: inside a list, continue the bullet; otherwise a plain line.
  */
 export function smartNewline(text, pos) {
   const start = lineStart(text, pos)

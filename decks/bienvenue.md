@@ -1,114 +1,114 @@
 ---
 title: ardoise
-author: démo
+author: demo
 ---
 
 # ardoise
 
-présenter en tapant, sans quitter le clavier
+present by typing, without leaving the keyboard
 
-<!-- note: Slide d'ouverture. Laisser respirer 3 secondes avant de parler. Le curseur est déjà dans la slide : c'est le sujet. -->
+<!-- note: Opening slide. Let it breathe for 3 seconds before talking. The cursor is already in the slide: that is the subject. -->
 
 ---
 
-## Le problème
+## The problem
 
-Une idée arrive, et il faut trois outils pour la montrer.
+An idea shows up, and it takes three tools to show it.
 
 <!-- pause -->
 
-- un deck pour la **structure**
-- un éditeur pour l'**écrire**
-- un terminal pour la **prouver**
+- a deck for the **structure**
+- an editor to **write** it
+- a terminal to **prove** it
 
 <!-- pause -->
 
 ::: warn
-Trois fenêtres, c'est trois occasions de perdre le fil - et le spectateur avec.
+Three windows means three chances to lose the thread - and the viewer with it.
 :::
 
-<!-- note: C'est le constat de départ. Ne pas le surjouer : une phrase suffit. -->
+<!-- note: This is the opening claim. Do not oversell it: one sentence is enough. -->
 
 ---
 
-## Une seule scène
+## One stage
 
-Il n'y a plus deux endroits : le curseur est **dans** la présentation.
+There are no longer two places: the cursor is **inside** the presentation.
 
 <!-- pause -->
 
-- `j` et `k` descendent et remontent de **paragraphe** en paragraphe
-- un paragraphe, c'est un pas de slide : la navigation *est* le rythme
-- `w` `b` `h` `l` affinent jusqu'au mot et au caractère
+- `j` and `k` walk down and up, **paragraph** by paragraph
+- a paragraph is a slide step: navigation *is* the pacing
+- `w` `b` `h` `l` refine down to the word and the character
 
 <!-- pause -->
 
 ::: key
-On ne bascule pas entre « présenter » et « éditer » : on change de granularité.
+You do not switch between "presenting" and "editing": you change granularity.
 :::
 
 ---
 
-## Écrire sur place
+## Writing in place
 
-`i` écrit dans le texte **déjà mis en forme**. Aucune fenêtre ne s'ouvre.
+`i` types into the text **already styled**. No window opens.
 
 <!-- pause -->
 
 ```text
-  j  →  ## Un titre          i  →  ## Un ti|tre
-  (rendu)                          (le markdown revient
-                                    sous le curseur)
+  j  ->  ## A title          i  ->  ## A ti|tle
+  (rendered)                      (markdown comes back
+                                   under the cursor)
 ```
 
 <!-- pause -->
 
 ::: ok
-`échap` rend la ligne au rendu. Le reste de la slide n'a pas bougé.
+`esc` hands the line back to the rendering. The rest of the slide has not moved.
 :::
 
-<!-- note: Moment de démonstration. Écrire une vraie phrase, pas un exemple. -->
+<!-- note: Demo moment. Type a real sentence, not an example. -->
 
 ---
 
-## Modale, vraiment
+## Modal, for real
 
 <!-- pause -->
 
-- `w` `b` `e` : mot suivant, précédent, fin
-- `0` `$` : début et fin de ligne
-- `x`, `d`+mouvement, `c`+mouvement : supprimer, changer
-- `u` : annuler
-- `A`, `I`, `O` : fin de ligne, début de ligne, nouveau paragraphe
-- `échap` : revenir au curseur, sans quitter la scène
+- `w` `b` `e`: next word, previous word, word end
+- `0` `$`: start and end of line
+- `x`, `d`+motion, `c`+motion: delete, change
+- `u`: undo
+- `A`, `I`, `O`: end of line, start of line, new paragraph
+- `esc`: back to the cursor, without leaving the stage
 
 <!-- pause -->
 
 ::: note
-Les compteurs marchent : `3w`, `2x`, `d2w`.
+Counts work: `3w`, `2x`, `d2w`.
 :::
 
 ---
 
-## Les pas
+## Steps
 
-Un paragraphe par pas, ou des groupes avec `<!-- pause -->`. C'est écrit, pas cliqué.
+One paragraph per step, or groups with `<!-- pause -->`. It is written, not clicked.
 
 <!-- pause -->
 
 ```markdown
-- un point
+- one point
 <!-- pause -->
-- le point suivant
+- the next point
 ```
 
 <!-- pause -->
 
-`espace` saute au groupe suivant ; `j` descend d'un seul paragraphe.
+`space` jumps to the next group; `j` moves down a single paragraph.
 
 ---
 
-## Le code, tel quel
+## Code, as it is
 
 ```nix
 { pkgs ? import <nixpkgs> {} }:
@@ -123,92 +123,92 @@ pkgs.mkShell {
 <!-- pause -->
 
 ::: ok
-La coloration ne dépend d'aucun service : tout est calculé localement.
+Highlighting depends on no service: everything is computed locally.
 :::
 
 ---
 
-## Un schéma qui se dessine
+## A diagram that draws itself
 
 ```mermaid
 graph LR
-  A[une idée] --> B{elle tient ?}
-  B -->|oui| C[une slide]
-  B -->|non| D[on en parle]
-  C --> E[(vidéo)]
+  A[an idea] --> B{does it hold?}
+  B -->|yes| C[a slide]
+  B -->|no| D[talk it through]
+  C --> E[(a video)]
   D --> E
 ```
 
 <!-- pause -->
 
-Le diagramme est du texte : il se modifie pendant la prise, comme le reste.
+A diagram is text: it is edited during the take, like everything else.
 
 ---
 
-## Le clavier, en une table
+## The keyboard, in one table
 
-| touche | geste |
+| key | gesture |
 |---|---|
-| `j` / `k` | paragraphe suivant / précédent |
-| `espace` | pas suivant (groupe) |
-| `n` / `p` | slide suivante / précédente |
-| `i` `a` `A` `I` `O` | écrire, sur place |
-| `w` `b` `e` | mot à mot |
-| `d` `w` · `c` `w` | supprimer · changer |
-| `u` / `échap` | annuler · valider et rendre |
-| `.` / `:` | écran noir · commandes |
+| `j` / `k` | next / previous paragraph |
+| `space` | next step (group) |
+| `n` / `p` | next / previous slide |
+| `i` `a` `A` `I` `O` | write, in place |
+| `w` `b` `e` | word by word |
+| `d` `w` / `c` `w` | delete / change |
+| `u` / `esc` | undo / back to the cursor |
+| `.` / `:` | black screen / commands |
 
-<!-- note: Ne pas lire la table. Montrer deux gestes, laisser l'aide faire le reste. -->
+<!-- note: Do not read the table. Show two gestures, let the help do the rest. -->
 
 ---
 
-## Thème et taille
+## Theme and size
 
-`:theme paper` pour la lumière du jour, `:theme nord`, `:theme gruvbox`.
+`:theme paper` for daylight, `:theme nord`, `:theme gruvbox`.
 
 <!-- pause -->
 
-- `+` / `-` ajustent la taille du texte par pas de 5 %
-- `:size 120` la règle d'un coup, `:size reset` revient à 100 %
-- un deck peut déclarer `theme: paper` dans son en-tête
+- `+` / `-` change the text size in 5% steps
+- `:size 120` sets it outright, `:size reset` goes back to 100%
+- a deck can declare `theme: paper` in its header
 
 <!-- pause -->
 
 ::: note
-Les deux se changent en pleine prise : rien n'est rechargé, rien ne clignote.
+Both can change mid-take: nothing reloads, nothing flashes.
 :::
 
 ---
 
-## Tourner proprement
+## Recording cleanly
 
-- `?raw=1` masque le pied de scène **et le repère de paragraphe**
-- `f` passe en plein écran
-- `P` ouvre les notes sur le second écran
-- `t` lance le chrono
-- `s` télécharge le markdown à jour
+- `?raw=1` hides the stage footer **and the paragraph marker**
+- `f` goes fullscreen
+- `P` opens the notes on your second screen
+- `t` starts the timer
+- `s` downloads the current markdown
 
 <!-- pause -->
 
 ::: key
-En captation, on ne voit que la slide. Le curseur reste ton affaire.
+The capture only sees the slide. The cursor stays your business.
 :::
 
 ---
 
-## À toi
+## Over to you
 
-Glisse ton propre fichier `.md` sur cette fenêtre, ou remplace `decks/bienvenue.md`.
+Drop your own `.md` file on this window, or replace `decks/bienvenue.md`.
 
 <!-- pause -->
 
 ```bash
 npm run dev      # http://localhost:5173
-npm run build    # dist/ statique, à ouvrir n'importe où
+npm run build    # static dist/, openable anywhere
 ```
 
 <!-- pause -->
 
 ::: ok
-Le deck est un fichier texte. Une vidéo, c'est un fichier et son historique git.
+A deck is a text file. A video is a file and its git history.
 :::

@@ -1,14 +1,13 @@
 /**
- * livepreview.js - décoration d'un document markdown pour l'édition "rendu vivant".
+ * livepreview.js - decorate a markdown document for live-preview editing.
  *
- * Le markdown reste la source. La syntaxe est masquée partout, sauf sur les
- * lignes où se trouve la sélection : on peut donc corriger un `**` sans
- * quitter le rendu.
+ * Markdown stays the source. Syntax is hidden everywhere except on the lines
+ * holding the selection, so you can fix a stray `**` without leaving the
+ * rendered view.
  *
- * Ce module est pur (aucun DOM) : il prend un texte + des positions de
- * sélection, et renvoie des décorations décrites en clair. `editor.js` les
- * traduit en objets CodeMirror, et les tests peuvent vérifier le découpage
- * sans navigateur.
+ * This module is pure (no DOM): it takes a string plus selection offsets and
+ * returns plain decoration descriptors. `editor.js` turns them into CodeMirror
+ * objects, and the tests can check the parsing without a browser.
  */
 
 const FENCE = /^\s*(`{3,}|~{3,})/
@@ -38,7 +37,7 @@ export function lineAt(starts, pos) {
   return low
 }
 
-/** Découpe une ligne en zones de code inline, pour ne pas y lire du markdown. */
+/** Split a line into inline code spans, so markdown is not parsed inside them. */
 function codeSpans(line) {
   const spans = []
   const re = /`([^`]+)`/g
@@ -54,8 +53,8 @@ function overlaps(spans, from, to) {
 }
 
 /**
- * @param {string} text markdown de la slide
- * @param {{from:number,to:number}[]} selections positions du curseur dans le document
+ * @param {string} text slide markdown
+ * @param {{from:number,to:number}[]} selections cursor offsets in the document
  * @returns {{lines: {line:number, className:string}[], marks: {from:number,to:number,className:string}[], replaces: {from:number,to:number}[]}}
  */
 export function buildDecorations(text, selections = []) {
@@ -79,7 +78,7 @@ export function buildDecorations(text, selections = []) {
     const line = text.slice(start, end)
     const isActive = active.has(index)
 
-    // Blocs de code : on ne décore pas l'intérieur, on stylise la ligne.
+    // Code blocks: never decorate the inside, only style the line.
     const fenceMatch = line.match(FENCE)
     if (fenceMatch) {
       if (!fence) {
@@ -183,7 +182,7 @@ export function buildDecorations(text, selections = []) {
       }
     }
 
-    // Liens : marqueurs asymétriques, traités à part.
+    // Links: asymmetric markers, handled separately.
     const linkRe = /\[([^\]]+)\]\(([^)]+)\)/g
     let link
     while ((link = linkRe.exec(line))) {

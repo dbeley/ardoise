@@ -1,6 +1,6 @@
 /**
- * Vérifications du noyau (sans navigateur) : découpage en blocs, édition
- * chirurgicale du source, déplacements et opérateurs.
+ * Core checks (no browser): block splitting, surgical source editing,
+ * motions and operators.
  *
  *   node tests/core.test.mjs
  */
@@ -36,91 +36,91 @@ const test = (name, fn) => {
   }
 }
 
-/* ---------------- découpage ---------------- */
+/* ---------------- splitting ---------------- */
 
-const slide = `## Un titre
+const slide = `## A title
 
-Premier paragraphe.
+First paragraph.
 
-- une puce
-- une autre
+- one bullet
+- another one
 
 <!-- pause -->
 
-Après la pause.
+After the pause.
 
-<!-- note: rien à signaler -->`
+<!-- note: nothing to report -->`
 
-test('les blocs respectent les paragraphes', () => {
+test('blocks follow paragraphs', () => {
   const { blocks } = scanBlocks(slide)
   assert.deepEqual(
     blocks.map((b) => b.kind),
     ['heading', 'para', 'list', 'para']
   )
-  assert.equal(blocks[0].text, '## Un titre')
-  assert.equal(blocks[2].text, '- une puce\n- une autre')
+  assert.equal(blocks[0].text, '## A title')
+  assert.equal(blocks[2].text, '- one bullet\n- another one')
 })
 
-test('les pauses créent des segments', () => {
+test('pauses create segments', () => {
   const { blocks, segmentCount } = scanBlocks(slide)
   assert.equal(segmentCount, 2)
   assert.equal(blocks[3].segIndex, 1)
 })
 
-test('les plages de lignes pointent le bon texte', () => {
+test('line ranges point at the right text', () => {
   const { blocks } = scanBlocks(slide)
   const lines = slide.split('\n')
   for (const block of blocks) {
     const slice = lines.slice(block.startLine, block.endLine + 1).join('\n')
-    assert.equal(slice.trim(), block.text, `bloc ${block.kind}`)
+    assert.equal(slice.trim(), block.text, `block ${block.kind}`)
   }
 })
 
-test('un bloc de code reste un seul bloc', () => {
-  const { blocks } = scanBlocks('```nix\n{\n  a = 1;\n}\n```\n\nSuite.')
+test('a code block stays a single block', () => {
+  const { blocks } = scanBlocks('```nix\n{\n  a = 1;\n}\n```\n\nAfter.')
   assert.equal(blocks.length, 2)
   assert.equal(blocks[0].kind, 'fence')
   assert.ok(blocks[0].text.includes('a = 1;'))
 })
 
-test('un encadré reste un seul bloc', () => {
-  const { blocks } = scanBlocks('::: key\ndu texte\n:::')
+test('a callout stays a single block', () => {
+  const { blocks } = scanBlocks('::: key\nsome text\n:::')
   assert.equal(blocks.length, 1)
   assert.equal(blocks[0].kind, 'box')
 })
 
-/* ---------------- édition du source ---------------- */
+/* ---------------- source editing ---------------- */
 
 const deck = `---
 title: Test
 ---
 
-## Titre
+## Title
 
-Premier.
+First.
 
 - a
 - b
 
-<!-- note: garder ceci -->
+<!-- note: keep this -->
 
 ---
 
-## Deux
+## Two
 `
 
-test('éditer un bloc ne touche pas au reste', () => {
+test('editing a block leaves the rest untouched', () => {
   const parsed = parseDeck(deck)
   const block = parsed.slides[0].blocks[1]
-  const next = applyBlockEdit(deck, 0, block.startLine, block.endLine, 'Premier modifié.')
+  const next = applyBlockEdit(deck, 0, block.startLine, block.endLine, 'First, edited.')
   const reparsed = parseDeck(next)
-  assert.equal(reparsed.slides[0].blocks[1].text, 'Premier modifié.')
-  assert.ok(next.includes('<!-- note: garder ceci -->'), 'la note doit survivre')
-  assert.ok(next.includes('## Deux'), 'la slide suivante doit survivre')
+  assert.equal(reparsed.slides[0].blocks[1].text, 'First, edited.')
+  assert.ok(next.includes('<!-- note: keep this -->'), 'the note must survive')
+  assert.ok(next.includes('## Two'), 'the next slide must survive')
   assert.equal(reparsed.slides.length, 2)
 })
 
-test('un bloc multi-lignes se remplace entièrement', () => {
+test('a multi-line block is replaced as a whole', () => {
   const parsed = parseDeck(deck)
   const list = parsed.slides[0].blocks[2]
   const next = applyBlockEdit(deck, 0, list.startLine, list.endLine, '- c')
@@ -129,113 +129,113 @@ test('un bloc multi-lignes se remplace entièrement', () => {
   assert.equal(reparsed.slides[0].blocks.length, parsed.slides[0].blocks.length)
 })
 
-test('insérer un bloc après un autre', () => {
+test('inserting a block after another', () => {
   const parsed = parseDeck(deck)
   const block = parsed.slides[0].blocks[0]
-  const next = insertBlockAfter(deck, 0, block.endLine, 'Nouveau paragraphe.')
+  const next = insertBlockAfter(deck, 0, block.endLine, 'New paragraph.')
   const reparsed = parseDeck(next)
-  assert.equal(reparsed.slides[0].blocks[1].text, 'Nouveau paragraphe.')
-  assert.equal(reparsed.slides[0].blocks[2].text, 'Premier.')
+  assert.equal(reparsed.slides[0].blocks[1].text, 'New paragraph.')
+  assert.equal(reparsed.slides[0].blocks[2].text, 'First.')
 })
 
-test('serialize conserve le markdown à l’identique', () => {
+test('serialize keeps the markdown intact', () => {
   const round = serialize(parseDeck(deck))
   assert.equal(parseDeck(round).slides.length, 2)
   assert.ok(round.includes('title: Test'))
 })
 
-/* ---------------- déplacements ---------------- */
+/* ---------------- motions ---------------- */
 
-const text = 'bonjour le monde'
+const text = 'hello brave world'
 
-test('w avance de mot en mot', () => {
-  assert.equal(nextWordStart(text, 0), 8)
-  assert.equal(nextWordStart(text, 8), 11)
-  assert.equal(nextWordStart(text, 11), text.length)
+test('w moves word by word', () => {
+  assert.equal(nextWordStart(text, 0), 6)
+  assert.equal(nextWordStart(text, 6), 12)
+  assert.equal(nextWordStart(text, 12), text.length)
 })
 
-test('b recule de mot en mot', () => {
-  assert.equal(prevWordStart(text, 11), 8)
-  assert.equal(prevWordStart(text, 8), 0)
+test('b moves back word by word', () => {
+  assert.equal(prevWordStart(text, 12), 6)
+  assert.equal(prevWordStart(text, 6), 0)
   assert.equal(prevWordStart(text, 0), 0)
 })
 
-test('e atteint la fin du mot', () => {
-  assert.equal(wordEnd(text, 0), 6)
-  assert.equal(wordEnd(text, 8), 9)
-  assert.equal(wordEnd(text, 11), 15)
+test('e reaches the end of the word', () => {
+  assert.equal(wordEnd(text, 0), 4)
+  assert.equal(wordEnd(text, 6), 10)
+  assert.equal(wordEnd(text, 12), 16)
 })
 
-test('h et l se déplacent d’un caractère, sans sortir', () => {
+test('h and l move one character, without leaving', () => {
   assert.equal(move(text, 0, 'h'), 0)
   assert.equal(move(text, 3, 'l'), 4)
   assert.equal(move(text, text.length - 1, 'l'), text.length - 1)
 })
 
-test('0 et $ vont au début et à la fin de ligne', () => {
+test('0 and $ go to line start and end', () => {
   const multi = 'abc\ndefgh'
   assert.equal(lineStart(multi, 6), 4)
   assert.equal(lineEnd(multi, 5), multi.length)
   assert.equal(move(multi, 6, '0'), 4)
-  assert.equal(move(multi, 4, '$'), 8)  // dernier caractère de 'defgh'
+  assert.equal(move(multi, 4, '$'), 8) // last character of 'defgh'
 })
 
-test('j et k conservent la colonne', () => {
+test('j and k keep the column', () => {
   const multi = 'abcdef\nxy\nabcdef'
-  assert.equal(move(multi, 3, 'j'), 8)  // ligne courte : dernière colonne réelle
-  assert.equal(move(multi, 8, 'k'), 1)  // colonne 1 conservée, pas 3
+  assert.equal(move(multi, 3, 'j'), 8) // short line: last real column
+  assert.equal(move(multi, 8, 'k'), 1) // column 1 kept, not 3
   assert.equal(move('abcdef\nuvwxyz', 3, 'j'), 10)
 })
 
-test('les compteurs multiplient le mouvement', () => {
+test('counts multiply a motion', () => {
   assert.equal(move('a b c d e', 0, 'w', 3), 6)
 })
 
-/* ---------------- opérateurs ---------------- */
+/* ---------------- operators ---------------- */
 
-test('dw supprime jusqu’au mot suivant', () => {
+test('dw deletes up to the next word', () => {
   const [from, to] = operatorRange(text, 0, 'w')
-  assert.deepEqual([from, to], [0, 8])
-  assert.equal(deleteRange(text, from, to).text, 'le monde')
+  assert.deepEqual([from, to], [0, 6])
+  assert.equal(deleteRange(text, from, to).text, 'brave world')
 })
 
-test('de supprime le mot courant en entier', () => {
+test('de deletes the whole current word', () => {
   const [from, to] = operatorRange(text, 0, 'e')
-  assert.equal(text.slice(from, to), 'bonjour')
+  assert.equal(text.slice(from, to), 'hello')
 })
 
-test('d0 supprime du début de ligne au curseur', () => {
+test('d0 deletes from line start to the cursor', () => {
   const [from, to] = operatorRange('abcdef', 4, '0')
   assert.deepEqual([from, to], [0, 4])
 })
 
-test('dd vise tout le bloc', () => {
+test('dd targets the whole block', () => {
   assert.deepEqual(operatorRange(text, 3, 'd'), [0, text.length])
 })
 
-test('supprimer une plage replace le curseur', () => {
-  const result = deleteRange(text, 8, 11)
-  assert.equal(result.text, 'bonjour monde')
-  assert.equal(result.pos, 8)
-})
-
-/* ---------------- entrée intelligente ---------------- */
-
-test('entrée prolonge une puce', () => {
-  const result = smartNewline('- premier', 9)
-  assert.equal(result.text, '- premier\n- ')
-  assert.equal(result.pos, 12)
-})
-
-test('entrée hors liste ajoute une ligne', () => {
-  const result = smartNewline('texte', 5)
-  assert.equal(result.text, 'texte\n')
+test('deleting a range puts the cursor back', () => {
+  const result = deleteRange(text, 6, 12)
+  assert.equal(result.text, 'hello world')
   assert.equal(result.pos, 6)
 })
 
-test('entrée dans une liste numérotée garde le préfixe', () => {
-  const result = smartNewline('1. un', 5)
-  assert.equal(result.text, '1. un\n1. ')
+/* ---------------- smart newline ---------------- */
+
+test('enter continues a bullet', () => {
+  const result = smartNewline('- first', 7)
+  assert.equal(result.text, '- first\n- ')
+  assert.equal(result.pos, 10)
 })
 
-console.log(`\n${passed} vérifications passées${process.exitCode ? ' - échecs ci-dessus' : ''}`)
+test('enter outside a list adds a line', () => {
+  const result = smartNewline('text', 4)
+  assert.equal(result.text, 'text\n')
+  assert.equal(result.pos, 5)
+})
+
+test('enter in a numbered list keeps the prefix', () => {
+  const result = smartNewline('1. one', 6)
+  assert.equal(result.text, '1. one\n1. ')
+})
+
+console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)

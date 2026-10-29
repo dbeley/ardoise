@@ -19,7 +19,7 @@
   const params = new URLSearchParams(location.search)
   const TEXT_KEYS = ['h', 'l', 'w', 'b', 'e', '0', '$', '↑', '↓']
 
-  /* ---------- état ---------- */
+  /* ---------- state ---------- */
 
   let source = $state(storage.deckSource() || welcome)
   let deck = $derived(parseDeck(source))
@@ -53,7 +53,7 @@
   let slide = $derived(deck.slides[slideIndex] ?? deck.slides[0] ?? null)
   let total = $derived(deck.slides.length || 1)
 
-  /* Les blocs viennent du document vivant, pas du source sauvegardé. */
+  /* Blocks come from the live document, never from the saved source. */
   let docBlocks = $derived(scanBlocks(docText).blocks)
   let starts = $derived(lineStarts(docText))
   let cursorLine = $derived(lineAt(starts, clamp(cursor, 0, docText.length)))
@@ -82,7 +82,7 @@
     toastTimer = setTimeout(() => (toastMsg = ''), 2200)
   }
 
-  /* ---------- persistance ---------- */
+  /* ---------- persistence ---------- */
 
   $effect(() => {
     document.documentElement.dataset.theme = theme
@@ -109,7 +109,7 @@
     saveTimer = setTimeout(() => storage.saveDeckSource(value), 400)
   })
 
-  /* ---------- chrono ---------- */
+  /* ---------- timer ---------- */
 
   let startedAt = 0
   let base = 0
@@ -138,7 +138,7 @@
     startedAt = Date.now()
   }
 
-  /* ---------- fenêtre orateur ---------- */
+  /* ---------- speaker window ---------- */
 
   let channel = null
   if (typeof BroadcastChannel !== 'undefined') {
@@ -179,10 +179,10 @@
     const url = new URL(location.href)
     url.search = '?presenter=1'
     window.open(url.toString(), 'ardoise-presenter', 'width=1000,height=740')
-    showToast('fenêtre orateur ouverte')
+    showToast('speaker window opened')
   }
 
-  /* ---------- initialisation ---------- */
+  /* ---------- startup ---------- */
 
   onMount(async () => {
     const wanted = params.has('slide') ? Number(params.get('slide')) - 1 : storage.slide()
@@ -196,7 +196,7 @@
         slideIndex = 0
         docVersion += 1
         applyDeckTheme(deck.meta)
-        showToast('deck chargé depuis l’URL')
+        showToast('deck loaded from URL')
       } catch {
         showToast('deck introuvable')
       }
@@ -258,9 +258,9 @@
   }
 
   /**
-   * Grisage du contenu qui n'est pas encore "révélé" (blocs après le segment
-   * courant). Calculé depuis la position réelle du curseur, jamais depuis un
-   * état dérivé : sinon le grisé suit avec un pas de retard.
+   * Dim the content that has not been revealed yet (blocks after the current
+   * segment). Computed from the cursor's real position, never from derived
+   * state: otherwise the dimming lags one step behind.
    */
   function syncPending(position, value) {
     if (!view) return
@@ -287,7 +287,7 @@
     }
   }
 
-  /* Chargement du document à chaque slide (ou rechargement externe). */
+  /* Load the document on every slide change (or external reload). */
   $effect(() => {
     const currentView = view
     const currentSlide = slide
@@ -320,7 +320,7 @@
     if (mode === 'insert') view.focus()
   })
 
-  /* Le grisage est recalculé par syncPending, à chaque déplacement. */
+  /* Dimming is recomputed by syncPending on every cursor move. */
 
   /* ---------- modes ---------- */
 
@@ -384,7 +384,7 @@
     if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
   }
 
-  /* ---------- édition modale ---------- */
+  /* ---------- modal editing ---------- */
 
   function applyMotion(key, count = 1) {
     const motion = key === '↑' ? 'k' : key === '↓' ? 'j' : key
@@ -450,23 +450,23 @@
 
   function undo() {
     if (!view) return
-    // `undo` refuse de tourner sur un document en lecture seule (mode normal) :
-    // on l'ouvre le temps de la transaction, sans laisser de fenêtre à la frappe.
+    // `undo` refuses to run on a read-only document (normal mode): we unlock it
+    // for the duration of the transaction, leaving no window for typing.
     const locked = view.state.readOnly
     if (locked) setReadOnly(view, false)
     const done = editorUndo(view)
     if (locked && !view.state.readOnly) setReadOnly(view, true)
-    if (!done) showToast('rien à annuler')
+    if (!done) showToast('nothing to undo')
     view.focus()
   }
 
-  /* ---------- fichiers ---------- */
+  /* ---------- files ---------- */
 
   function saveDeck() {
     flushWrite()
     const name = slugify(deck.meta.title) || 'ardoise'
     download(`${name}.md`, serialize(parseDeck(source)))
-    showToast('deck exporté en markdown')
+    showToast('deck exported as markdown')
   }
 
   async function exportPdf() {
@@ -490,7 +490,7 @@
 
   async function loadFile(file) {
     if (!file) return
-    adoptDeck(await file.text(), `deck chargé : ${file.name}`)
+    adoptDeck(await file.text(), `deck loaded: ${file.name}`)
   }
 
   function openFilePicker() {
@@ -501,9 +501,9 @@
     try {
       const response = await fetch(url)
       if (!response.ok) throw new Error(String(response.status))
-      adoptDeck(await response.text(), 'deck importé depuis l’URL')
+      adoptDeck(await response.text(), 'deck imported from URL')
     } catch {
-      showToast('import impossible (URL ou CORS)')
+      showToast('import failed (URL or CORS)')
     }
   }
 
@@ -515,7 +515,7 @@
 
   function resetAll() {
     storage.clearDeckSource()
-    adoptDeck(welcome, 'retour au deck de démonstration')
+    adoptDeck(welcome, 'back to the demo deck')
   }
 
   async function toggleFullscreen() {
@@ -523,26 +523,26 @@
       if (document.fullscreenElement) await document.exitFullscreen()
       else await document.documentElement.requestFullscreen()
     } catch {
-      showToast('plein écran refusé par le navigateur')
+      showToast('fullscreen refused by the browser')
     }
   }
 
   function cycleTheme() {
     theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
-    showToast(`thème : ${theme}`)
+    showToast(`theme: ${theme}`)
   }
 
   function setTheme(name) {
     const wanted = String(name || '').trim().toLowerCase()
     if (!THEMES.includes(wanted)) {
-      showToast(`thèmes : ${THEMES.join(', ')}`)
+      showToast(`themes: ${THEMES.join(', ')}`)
       return
     }
     theme = wanted
-    showToast(`thème : ${wanted}`)
+    showToast(`theme: ${wanted}`)
   }
 
-  /* Un deck peut déclarer son thème dans son en-tête : il s'applique à l'ouverture. */
+  /* A deck may declare its theme in its header: it applies on load. */
   function applyDeckTheme(meta) {
     const fromUrl = String(params.get('theme') || '').toLowerCase()
     if (THEMES.includes(fromUrl)) {
@@ -552,7 +552,7 @@
     const fromDeck = String(meta?.theme || '').toLowerCase()
     if (THEMES.includes(fromDeck) && fromDeck !== theme) {
       theme = fromDeck
-      showToast(`thème du deck : ${fromDeck}`)
+      showToast(`deck theme: ${fromDeck}`)
     }
   }
 
@@ -561,54 +561,54 @@
 
   function setScale(value) {
     if (value === undefined || value === null || value === '') {
-      showToast(`taille : ${Math.round(typeScale * 100)} %`)
+      showToast(`size: ${Math.round(typeScale * 100)}%`)
       return
     }
     let number = Number(String(value).trim())
     if (!Number.isFinite(number)) {
-      showToast('taille : +10, -10, 120, reset')
+      showToast('size: +10, -10, 120, reset')
       return
     }
     if (Math.abs(number) > 10) number /= 100
     typeScale = Math.round(clamp(number, SCALE_MIN, SCALE_MAX) * 100) / 100
-    showToast(`taille : ${Math.round(typeScale * 100)} %`)
+    showToast(`size: ${Math.round(typeScale * 100)}%`)
   }
 
   function bumpScale(delta) {
     setScale(typeScale + delta)
   }
 
-  /* ---------- palette de commandes ---------- */
+  /* ---------- command palette ---------- */
 
   let commands = $derived([
-    { id: 'next', key: 'next', label: 'paragraphe suivant', run: nextBlock },
-    { id: 'prev', key: 'prev', label: 'paragraphe précédent', run: prevBlock },
-    { id: 'step', key: 'step', label: 'pas suivant (segment)', run: nextStep },
-    { id: 'slide', key: 'slide 7', label: 'aller à la slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
-    { id: 'edit', key: 'edit', label: 'écrire ici (mode insertion)', run: () => setMode('insert') },
-    { id: 'new', key: 'new', label: 'nouveau paragraphe', run: newParagraph },
-    { id: 'theme', key: 'theme nord', label: 'changer de thème', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
-    { id: 'size', key: 'size 120', label: 'taille du texte (80–160 %)', run: (q) => {
+    { id: 'next', key: 'next', label: 'next paragraph', run: nextBlock },
+    { id: 'prev', key: 'prev', label: 'previous paragraph', run: prevBlock },
+    { id: 'step', key: 'step', label: 'next step (segment)', run: nextStep },
+    { id: 'slide', key: 'slide 7', label: 'go to slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
+    { id: 'edit', key: 'edit', label: 'type here (insert mode)', run: () => setMode('insert') },
+    { id: 'new', key: 'new', label: 'new paragraph', run: newParagraph },
+    { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
+    { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {
         const argument = q.split(/\s+/)[1]
         if (argument === 'reset') setScale(1)
         else if (argument) setScale(argument)
-        else showToast(`taille : ${Math.round(typeScale * 100)} %`)
+        else showToast(`size: ${Math.round(typeScale * 100)}%`)
       } },
-    { id: 'overview', key: 'overview', label: 'vue d’ensemble', run: () => { overviewCursor = slideIndex; mode = 'overview' } },
-    { id: 'presenter', key: 'presenter', label: 'fenêtre orateur', run: openPresenter },
-    { id: 'timer', key: 'timer', label: 'chrono marche / arrêt', run: toggleTimer },
-    { id: 'timer-reset', key: 'timer reset', label: 'remettre le chrono à zéro', run: resetTimer },
-    { id: 'open', key: 'open', label: 'importer un fichier markdown', run: (q) => {
+    { id: 'overview', key: 'overview', label: 'overview', run: () => { overviewCursor = slideIndex; mode = 'overview' } },
+    { id: 'presenter', key: 'presenter', label: 'speaker window', run: openPresenter },
+    { id: 'timer', key: 'timer', label: 'timer start / stop', run: toggleTimer },
+    { id: 'timer-reset', key: 'timer reset', label: 'reset the timer', run: resetTimer },
+    { id: 'open', key: 'open', label: 'import a markdown file', run: (q) => {
         const argument = q.split(/\s+/)[1]
         if (argument) importFromUrl(argument)
         else openFilePicker()
       } },
-    { id: 'save', key: 'save', label: 'télécharger le markdown', run: saveDeck },
-    { id: 'export', key: 'export', label: 'exporter en PDF (impression)', run: exportPdf },
-    { id: 'undo', key: 'undo', label: 'annuler la dernière édition', run: undo },
-    { id: 'raw', key: 'raw', label: 'masquer le pied de scène (OBS)', run: () => { raw = !raw; showToast(raw ? 'mode captation' : 'pied de scène visible') } },
-    { id: 'reset', key: 'reset', label: 'revenir au deck de démo', run: resetAll },
-    { id: 'help', key: 'help', label: 'aide clavier', run: () => (mode = 'help') },
+    { id: 'save', key: 'save', label: 'download the markdown', run: saveDeck },
+    { id: 'export', key: 'export', label: 'export as PDF (print)', run: exportPdf },
+    { id: 'undo', key: 'undo', label: 'undo the last edit', run: undo },
+    { id: 'raw', key: 'raw', label: 'hide the stage footer (OBS)', run: () => { raw = !raw; showToast(raw ? 'capture mode' : 'stage footer visible') } },
+    { id: 'reset', key: 'reset', label: 'back to the demo deck', run: resetAll },
+    { id: 'help', key: 'help', label: 'keyboard help', run: () => (mode = 'help') },
   ])
 
   function runCommand(command, query) {
@@ -623,10 +623,10 @@
       goToSlide(Number(trimmed) - 1)
       return
     }
-    showToast(`commande inconnue : ${trimmed}`)
+    showToast(`unknown command: ${trimmed}`)
   }
 
-  /* ---------- clavier ---------- */
+  /* ---------- keyboard ---------- */
 
   function dismissOnboarding() {
     storage.setOnboarded(true)
@@ -683,7 +683,7 @@
     }
 
     if (mode === 'help') {
-      if (key === 'échap' || key === '?' || key === 'q') {
+      if (key === 'esc' || key === '?' || key === 'q') {
         event.preventDefault()
         setMode('present')
       }
@@ -692,10 +692,10 @@
 
     if (mode === 'overview') {
       const cols = gridColumns()
-      if (key === 'échap' || key === 'o') {
+      if (key === 'esc' || key === 'o') {
         event.preventDefault()
         setMode('present')
-      } else if (key === 'entrée' || key === 'espace') {
+      } else if (key === 'enter' || key === 'espace') {
         event.preventDefault()
         goToSlide(overviewCursor)
         setMode('present')
@@ -710,7 +710,7 @@
     }
 
     if (mode === 'command') {
-      if (key === 'échap') {
+      if (key === 'esc') {
         event.preventDefault()
         setMode('present')
       }
@@ -718,13 +718,13 @@
     }
 
     if (mode === 'insert') {
-      if (key === 'échap') {
+      if (key === 'esc') {
         event.preventDefault()
         event.stopPropagation()
         setMode('present')
         return
       }
-      if (key === 'entrée') {
+      if (key === 'enter') {
         event.preventDefault()
         event.stopPropagation()
         insertNewline()
@@ -736,10 +736,10 @@
         insertText('  ')
         return
       }
-      return // frappe libre : CodeMirror s'en occupe
+      return // free typing: CodeMirror handles it
     }
 
-    // Mode normal : nous possédons le clavier, CodeMirror ne voit rien.
+    // Normal mode: the keyboard is ours, CodeMirror sees nothing.
     event.stopPropagation()
 
     if (/^[0-9]$/.test(key)) {
@@ -758,7 +758,7 @@
         applyOperator(op, key, count)
         return
       }
-      showToast('mouvement non reconnu')
+      showToast('motion not recognised')
       return
     }
 
@@ -769,7 +769,7 @@
     }
 
     switch (key) {
-      case 'échap':
+      case 'esc':
         event.preventDefault()
         setMode('present')
         return
@@ -937,7 +937,7 @@
   steps={segmentCount}
   {elapsed}
   {running}
-  mode={mode === 'insert' ? 'insertion' : 'present'}
+  mode={mode}
 />
 
 <CommandBar
@@ -965,7 +965,7 @@
 {/if}
 
 {#if mode === 'black'}
-  <div class="black-screen">écran noir · une touche pour revenir</div>
+  <div class="black-screen">black screen - press any key</div>
 {/if}
 
 {#if toastMsg}
@@ -977,43 +977,43 @@
     <div class="panel" style="width:min(760px,94vw)">
       <div class="panel-head">
         <strong>ardoise</strong>
-        <span>prise en main</span>
+        <span>getting started</span>
       </div>
       <div class="panel-body">
         <p style="margin:0 0 .4rem;color:var(--fg)">
-          Un seul mode : le texte est déjà à l’écran, le curseur est dedans.
+          One mode only: the text is already on screen, and the cursor is in it.
         </p>
         <div class="onboard-list">
           <div class="onboard-row">
             <span class="help-keys"><kbd>j</kbd> <kbd>k</kbd></span>
-            <span>paragraphe suivant / précédent - c’est aussi le rythme des slides</span>
+            <span>next / previous paragraph - this is also the rhythm of the slides</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>espace</kbd></span>
-            <span>pas suivant : le texte en attente s’éclaire</span>
+            <span>next step: the pending text lights up</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>i</kbd></span>
-            <span>écrire dans le texte mis en forme, <kbd>échap</kbd> revient au curseur</span>
+            <span>type into the styled text, <kbd>esc</kbd> returns to the cursor</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>w</kbd> <kbd>b</kbd> <kbd>d</kbd><kbd>w</kbd></span>
-            <span>mot à mot, suppression - le markdown réapparaît sous le curseur</span>
+            <span>word by word, delete - markdown reappears under the cursor</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>?</kbd> <kbd>:</kbd> <kbd>.</kbd></span>
-            <span>aide, commandes, écran noir</span>
+            <span>help, commands, black screen</span>
           </div>
         </div>
         <p style="margin:0;font-size:.78rem;color:var(--muted)">
-          Glisse un fichier <code>.md</code> sur la fenêtre, ou <code>:open</code> pour l’importer.
+          Drop a <code>.md</code> file on the window, or <code>:open</code> to import one.
         </p>
         <button
           type="button"
           onclick={dismissOnboarding}
           style="margin-top:1.2rem;background:var(--accent-soft);color:var(--fg);border:1px solid var(--accent);border-radius:3px;padding:.5rem 1rem;font-family:inherit;font-size:.8rem;cursor:pointer"
         >
-          commencer
+          start
         </button>
       </div>
     </div>

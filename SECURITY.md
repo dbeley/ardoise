@@ -1,31 +1,30 @@
-# Sécurité
+# Security
 
-## Modèle de menace
+## Threat model
 
-ardoise est une application **entièrement côté navigateur** : aucun serveur, aucun
-compte, aucune requête réseau au chargement (hors polices système et diagrammes
-calculés localement). Il n'y a donc ni clé d'API, ni session, ni donnée à exfiltrer
-côté serveur.
+ardoise is an **entirely client-side** application: no server, no account, no network
+request on load (beyond system fonts and diagrams computed locally). There is therefore
+no API key, no session, and nothing to exfiltrate server-side.
 
-La seule entrée non fiable est **le markdown que tu ouvres** (fichier local, URL
-distante, ou contenu déjà présent dans `localStorage`).
+The only untrusted input is **the markdown you open** (a local file, a remote URL, or
+content already sitting in `localStorage`).
 
-Ce qui borne cette entrée :
+What bounds that input:
 
-- markdown-it est configuré avec `html: false` : le HTML brut d'un deck n'est jamais
-  interprété, il est échappé ;
-- Mermaid est initialisé avec `securityLevel: 'strict'` ;
-- les liens externes sont ouverts en `rel="noreferrer noopener"` ;
-- l'application ne lit ni cookie, ni `location.hash`, ni paramètre d'URL autre que
-  `slide`, `theme`, `raw`, `deck`, `presenter`.
+- markdown-it runs with `html: false`: raw HTML inside a deck is never interpreted, it
+  is escaped;
+- Mermaid is initialised with `securityLevel: 'strict'`;
+- external links open with `rel="noreferrer noopener"`;
+- the app reads no cookie, no `location.hash`, and no URL parameter other than `slide`,
+  `theme`, `raw`, `deck` and `presenter`.
 
-Risque résiduel assumé : un deck importé peut contenir des liens vers des sites
-tiers, et `?deck=` fait une requête `fetch` vers l'URL demandée (soumise à CORS).
+Accepted residual risk: an imported deck can contain links to third-party sites, and
+`?deck=` performs a `fetch` against the requested URL (subject to CORS).
 
-## Signaler une faille
+## Reporting a vulnerability
 
-Ouvre un rapport privé :
+Open a private report:
 <https://github.com/dbeley/ardoise/security/advisories/new>
 
-Merci de ne pas créer d'issue publique avant correction. Un délai de 30 jours est
-raisonnable pour un correctif ; ce projet est maintenu sur temps libre.
+Please do not open a public issue before a fix ships. Thirty days is a reasonable
+window for a patch; this project is maintained in spare time.

@@ -1,10 +1,10 @@
 /**
- * render.js - markdown -> HTML, adapter au rendu « presenterm ».
+ * render.js - markdown to HTML, tuned for the presenterm-like look.
  *
  * Ajoute :
- *  - coloration syntaxique (highlight.js, thème maison)
- *  - blocs ```mermaid laissés en placeholder, hydratés côté DOM
- *  - conteneurs didactiques ::: key / warn / ok / note / quote
+ *  - syntax highlighting (highlight.js, house theme)
+ *  - ```mermaid blocks left as placeholders, hydrated in the DOM
+ *  - didactic containers: ::: key / warn / ok / note / quote
  *  - liens externes en target=_blank
  */
 import MarkdownIt from 'markdown-it'
@@ -56,11 +56,11 @@ hljs.registerAliases(['md'], { languageName: 'markdown' })
 hljs.registerAliases(['toml'], { languageName: 'ini' })
 
 export const CONTAINERS = {
-  key: { label: 'à retenir', icon: '◆' },
-  warn: { label: 'attention', icon: '▲' },
-  ok: { label: 'ça marche', icon: '✓' },
+  key: { label: 'key point', icon: '◆' },
+  warn: { label: 'watch out', icon: '▲' },
+  ok: { label: 'it works', icon: '✓' },
   note: { label: 'note', icon: '›' },
-  quote: { label: 'citation', icon: '”' },
+  quote: { label: 'quote', icon: '”' },
 }
 
 const PLACEHOLDER = /\u0000C(\d+)\u0000/g
@@ -148,7 +148,7 @@ function extractContainers(source) {
   }
 
   if (current) {
-    // Conteneur non fermé : on rend le texte tel quel plutôt que de le perdre.
+    // Unclosed container: render the text as-is rather than drop it.
     out.push(`::: ${current.kind}`, ...current.lines)
   }
 
@@ -165,7 +165,7 @@ export function renderMarkdown(source) {
   const { text, blocks } = extractContainers(String(source ?? ''))
   let html = md.render(text)
   html = html.replace(PLACEHOLDER, (_, id) => renderContainer(blocks[Number(id)]))
-  // Un placeholder isolé est entouré de <p>…</p> : on déballe.
+  // A lone placeholder ends up wrapped in <p>...</p>: unwrap it.
   html = html.replace(/<p>\s*(<div class="box)/g, '$1').replace(/(<\/div>)\s*<\/p>/g, '$1')
   return html
 }
@@ -174,7 +174,7 @@ export function renderInline(source) {
   return md.renderInline(String(source ?? ''))
 }
 
-/** Rendu des blocs mermaid, appelé depuis l'action `diagrams`. */
+/** Render mermaid blocks, called from the `diagrams` action. */
 let mermaidPromise = null
 async function getMermaid() {
   if (!mermaidPromise) {

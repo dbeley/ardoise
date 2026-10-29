@@ -1,7 +1,7 @@
 /**
- * deck.js - parsing / sérialisation du format ardoise.
+ * deck.js - parse and serialise the ardoise format.
  *
- * Format :
+ * Format:
  *   ---
  *   title: Mon sujet
  *   author: David
@@ -11,9 +11,9 @@
  *   ...
  *   ---
  *   # Slide 2
- *   <!-- pause -->        révèle la suite au pas suivant
- *   <!-- note: à dire -->  note orateur (jamais affichée sur scène)
- *   <!-- layout: center --> centre verticalement cette slide
+ *   <!-- pause -->        reveal the rest on the next step
+ *   <!-- note: to say -->  speaker note (never shown on stage)
+ *   <!-- layout: center --> centre this slide vertically
  */
 
 const FRONTMATTER_KEYS = ['title', 'author', 'theme', 'subtitle', 'date', 'event']
@@ -45,7 +45,7 @@ export function parseFrontmatter(source) {
   return { meta, body }
 }
 
-/** Découpe le corps en slides sur les lignes `---` isolées (hors blocs de code). */
+/** Split the body into slides on lone `---` lines (outside code blocks). */
 export function splitSlides(body) {
   const slides = []
   let buffer = []
@@ -72,7 +72,7 @@ export function splitSlides(body) {
 
 /**
  * Extrait les directives (commentaires HTML) d'une slide brute.
- * Renvoie la slide normalisée : { raw, body, note, layout, segments[] }
+ * Returns the normalised slide: { raw, body, note, layout, segments[] }
  */
 export function blockKind(text) {
   const first = text.trimStart()
@@ -87,11 +87,11 @@ export function blockKind(text) {
 }
 
 /**
- * Découpe une slide en blocs (paragraphes, titres, listes, fences, encadrés)
- * en conservant leur plage de lignes exacte dans le markdown de la slide.
+ * Split a slide into blocks (paragraphs, headings, lists, fences, boxes),
+ * keeping their exact line range in the slide's markdown.
  *
- * C'est cette plage qui permet d'éditer un bloc sans réécrire le fichier :
- * on remplace des lignes, les commentaires (notes, pauses) restent intacts.
+ * That range is what lets a block be edited without rewriting the file: lines
+ * are replaced, so comments (notes, pauses) stay untouched.
  */
 export function scanBlocks(raw) {
   const lines = String(raw ?? '').split('\n')
@@ -177,7 +177,7 @@ export function scanBlocks(raw) {
   return { blocks, segmentCount: blocks.length ? Math.max(...blocks.map((b) => b.segIndex)) + 1 : 1 }
 }
 
-/** Extrait les directives (commentaires HTML) d'une slide brute. */
+/** Extract directives (HTML comments) from a raw slide. */
 export function parseSlide(raw, index) {
   let note = ''
   let layout = ''
@@ -225,7 +225,7 @@ export function parseDeck(source) {
   const { meta, body } = parseFrontmatter(source)
   const raws = splitSlides(body)
   const slides = raws.map((raw, i) => parseSlide(raw, i)).filter((s, i) => {
-    // Une slide entièrement vide en fin de document est ignorée.
+    // A wholly empty slide at the end of the document is dropped.
     return !(s.segments.length === 1 && s.segments[0] === '' && i === raws.length - 1)
   })
   slides.forEach((s, i) => {
@@ -264,7 +264,7 @@ export function slugify(value) {
     .replace(/(^-|-$)/g, '')
 }
 
-/** Sépare l'en-tête YAML du corps, en gardant l'en-tête tel quel. */
+/** Separate the YAML header from the body, keeping the header verbatim. */
 export function splitHead(source) {
   const text = String(source ?? '').replace(/\r\n?/g, '\n')
   if (!text.startsWith('---\n')) return { head: '', body: text, eol: '\n' }
@@ -284,7 +284,7 @@ function rebuild(source, slideIndex, mutate) {
   return `${head}${head ? '\n' : ''}${raws.join('\n\n---\n\n')}\n`
 }
 
-/** Remplace les lignes d'un bloc par un nouveau texte (édition en place). */
+/** Replace a block's lines with new text (in-place editing). */
 export function applyBlockEdit(source, slideIndex, startLine, endLine, text) {
   return rebuild(source, slideIndex, (lines) => {
     const replacement = String(text ?? '').split('\n')
@@ -296,12 +296,12 @@ export function applyBlockEdit(source, slideIndex, startLine, endLine, text) {
   })
 }
 
-/** Remplace tout le markdown d'une slide (l'éditeur en est la source). */
+/** Replace a whole slide's markdown (the editor owns it). */
 export function applySlideRaw(source, slideIndex, text) {
   return rebuild(source, slideIndex, () => String(text ?? '').split('\n'))
 }
 
-/** Insère un nouveau bloc juste après la ligne indiquée. */
+/** Insert a new block right after the given line. */
 export function insertBlockAfter(source, slideIndex, afterLine, text) {
   return rebuild(source, slideIndex, (lines) => {
     const copy = [...lines]
@@ -311,7 +311,7 @@ export function insertBlockAfter(source, slideIndex, afterLine, text) {
   })
 }
 
-/** Reconstruit un markdown propre, un bloc par paragraphe. */
+/** Rebuild clean markdown, one block per paragraph. */
 export function serialize(deck) {
   const meta = deck.meta
   const head = [

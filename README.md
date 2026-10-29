@@ -3,259 +3,261 @@
 [![deploy](https://github.com/dbeley/ardoise/actions/workflows/deploy.yml/badge.svg)](https://github.com/dbeley/ardoise/actions/workflows/deploy.yml)
 [![license](https://img.shields.io/github/license/dbeley/ardoise)](LICENSE)
 
-**[Essayer en ligne](https://dbeley.github.io/ardoise/)** - rien à installer, le deck
-de démonstration se charge tout seul.
+**[Try it online](https://dbeley.github.io/ardoise/)** - nothing to install, the demo deck
+loads by itself.
 
-Scène de présentation **pilotée au clavier** : un deck markdown, un curseur unique,
-une palette de commandes, des notes orateur - dans une seule fenêtre.
+A **keyboard-driven** presentation stage: a markdown deck, one cursor, a command
+palette and speaker notes, in a single window.
 
-Pensé pour les vidéos où l'on **tape pendant qu'on parle**. La présentation et
-l'édition ne sont pas deux écrans : c'est le même curseur, à deux granularités.
+Built for videos where you **type while you talk**. Presenting and editing are not two
+screens: it is the same cursor, at two granularities.
 
 ```
-j k      paragraphe        i        éditer sur place      w b e    mot à mot
-espace   pas suivant       échap    rendre               .        écran noir
+j k      paragraph        i        write in place        w b e    word by word
+space    next step        esc      back to the cursor    .        black screen
 ```
 
-## Démarrage
+## Getting started
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # dist/ - statique, ouvrable n'importe où
-npm run preview    # sert dist/
-node tests/core.test.mjs   # noyau : blocs, édition, mouvements
+npm run build      # static dist/, openable anywhere
+npm run preview    # serves dist/
+npm test           # no browser: blocks, editing, motions, live preview
 ```
 
-Sur NixOS : `nix develop` (Node 22 fourni), puis les mêmes commandes.
+On NixOS: `nix develop` (Node 22 provided), then the same commands.
 
-L'application démarre sur un deck de démonstration (`decks/bienvenue.md`) qui explique
-aussi le format. Glisse n'importe quel fichier `.md` sur la fenêtre pour le présenter.
+The app starts on a demo deck (`decks/bienvenue.md`) that also documents the format.
+Drop any `.md` file on the window to present it.
 
-## Un seul mode
+## One mode
 
-Il n'y a pas d'écran de lecture et d'écran d'édition : **le texte à l'écran est le
-document**. Le curseur est dedans, et la mise en forme est déjà appliquée.
+There is no reading screen and no editing screen: **the text on screen is the
+document**. The cursor lives inside it, and the formatting is already applied.
 
-- **`j` / `k`** descendent et remontent de **paragraphe** en paragraphe. Pour une
-  présentation finie, un paragraphe = un pas : la navigation *est* le rythme des slides.
-- **`w` `b` `e` `h` `l` `0` `$`** affinent jusqu'au mot et au caractère, avec compteurs
-  (`3w`, `2x`, `d2w`).
-- **`i` `a` `A` `I` `O`** écrivent directement dans ce texte mis en forme.
-- **`échap`** revient au curseur.
+- **`j` / `k`** walk down and up, **paragraph** by paragraph. In a finished
+  presentation a paragraph is a step: navigation *is* the pacing of the slides.
+- **`w` `b` `e` `h` `l` `0` `$`** refine down to the word and the character, with
+  counts (`3w`, `2x`, `d2w`).
+- **`i` `a` `A` `I` `O`** type directly into that styled text.
+- **`esc`** returns to the cursor.
 
-Le markdown n'est pas un autre monde : la syntaxe (`##`, `**`, `-`, liens) est **masquée
-partout, et réapparaît sur la ligne du curseur**. On peut donc corriger un `**` sans
-quitter le rendu, et refermer la paire fait apparaître le gras immédiatement.
+Markdown is not another world: the syntax (`##`, `**`, `-`, links) is **hidden
+everywhere and reappears on the cursor's line**. You can fix a stray `**` without
+leaving the rendered view, and closing the pair makes the bold appear immediately.
 
-Les blocs qui ne sont pas du texte enrichi (code, tableaux, diagrammes, encadrés) restent
-affichés en source stylisée : c'est le prix de l'exactitude, et le curseur peut y entrer
-comme ailleurs.
+Blocks that are not inline text (code, tables, diagrams, callouts) stay as styled
+source: that is the price of exactness, and the cursor can enter them like anywhere
+else.
 
-Le contenu situé après un `<!-- pause -->` est **grisé** tant qu'on ne l'a pas atteint :
-il reste lisible et éditable, mais on voit où en est la révélation.
+Content after a `<!-- pause -->` is **dimmed** until you reach it: still readable and
+editable, but you can see how far the reveal has gone.
 
-`u` annule la dernière édition. `s` télécharge le deck à jour.
+`u` undoes the last edit. `s` downloads the current deck.
 
-## Le clavier
+## The keyboard
 
-| touche | geste |
+| key | gesture |
 |---|---|
-| `j` / `k` | paragraphe suivant / précédent |
-| `espace` | pas suivant (groupe `<!-- pause -->`), puis slide |
-| `n` / `p` | slide suivante / précédente |
-| `3` `G` | aller au paragraphe 3 |
-| `gg` / `G` | début / fin du deck |
-| `h` `l` | caractère |
-| `w` `b` `e` | mot suivant, précédent, fin |
-| `0` `$` | début / fin de ligne |
-| `↑` `↓` | ligne à l'intérieur du bloc |
-| `i` `a` `A` `I` | insérer : avant, après, fin de ligne, début de ligne |
-| `O` | nouveau paragraphe après |
-| `x` | supprimer le caractère |
-| `d` + mouvement | supprimer (`dw`, `de`, `d$`, `dd`) |
-| `c` + mouvement | changer (`cw`, `cc`) |
-| `u` | annuler |
-| `échap` | valider et revenir au rendu |
-| `.` | écran noir (une touche pour revenir) |
-| `o` | vue d'ensemble (`h j k l`, `entrée`) |
-| `t` | chrono marche / arrêt |
-| `f` | plein écran |
-| `P` | fenêtre orateur |
-| `s` | télécharger le deck |
-| `:` | palette de commandes |
-| `+` / `-` | taille du texte (pas de 5 %) |
-| `?` | aide clavier |
+| `j` / `k` | next / previous paragraph |
+| `space` | next step (group), then next slide |
+| `n` / `p` | next / previous slide |
+| `3` `G` | jump to paragraph 3 |
+| `gg` / `G` | start / end of deck |
+| `h` `l` | character |
+| `w` `b` `e` | next word, previous word, word end |
+| `0` `$` | start / end of line |
+| `↑` `↓` | line inside the block |
+| `i` `a` `A` `I` | type: before, after, end of line, start of line |
+| `O` | new paragraph after |
+| `x` | delete a character |
+| `d` + motion | delete (`dw`, `de`, `d$`, `dd`) |
+| `c` + motion | change (`cw`, `cc`) |
+| `u` | undo |
+| `esc` | back to the cursor (normal mode) |
+| `.` | black screen (any key brings it back) |
+| `o` | overview (`h j k l`, `enter`) |
+| `t` | timer start / stop |
+| `f` | fullscreen |
+| `P` | speaker window |
+| `s` | download the deck |
+| `:` | command palette |
+| `+` / `-` | text size (5% steps) |
+| `?` | keyboard help |
 
-`j`/`k` sont volontairement le paragraphe, pas la ligne : c'est ce qui fait coïncider
-navigation et tournage. Les lignes internes se parcourent avec `↑`/`↓`.
+`j`/`k` are deliberately the paragraph, not the line: that is what makes navigation
+and pacing the same gesture. Inner lines are reached with `↑`/`↓`.
 
-## Importer et exporter
+## Import and export
 
-L'application est un site statique : tes fichiers ne quittent jamais le navigateur,
-il n'y a ni compte ni serveur.
+The app is a static site: your files never leave the browser, there is no account and
+no server.
 
-| geste | effet |
+| gesture | effect |
 |---|---|
-| glisser un `.md` sur la fenêtre | l'ouvrir |
-| `:open` | choisir un fichier markdown |
-| `:open https://…/deck.md` | importer depuis une URL (si le serveur autorise CORS) |
-| `?deck=./deck.md` | ouvrir un deck au chargement |
-| `s` | télécharger le deck courant en markdown |
-| `:export` | PDF via l'impression du navigateur |
+| drop a `.md` on the window | open it |
+| `:open` | pick a markdown file |
+| `:open https://.../deck.md` | import from a URL (if the server allows CORS) |
+| `?deck=./deck.md` | load a deck at startup |
+| `s` | download the current deck as markdown |
+| `:export` | PDF through the browser print dialog |
 
-Les éditions sont conservées dans `localStorage` : tu peux fermer l'onglet et
-retrouver ta slide. `:reset` revient au deck de démonstration.
+Edits are kept in `localStorage`: you can close the tab and get your slide back.
+`:reset` returns to the demo deck.
 
-## Format du deck
+## Deck format
 
 ```markdown
 ---
-title: Mon sujet
+title: My talk
 author: David
 theme: ardoise
 ---
 
-# Titre de couverture
+# Cover title
 
 ---
 
-## Une slide
+## A slide
 
-- un point
+- one point
 <!-- pause -->
-- révélé au pas suivant
+- revealed on the next step
 
-<!-- note: à dire à l'oral, jamais affiché sur scène -->
+<!-- note: to say out loud, never shown on stage -->
 ```
 
-| syntaxe | effet |
+| syntax | effect |
 |---|---|
-| `---` seul sur une ligne | sépare deux slides (ignoré dans les blocs de code) |
-| `<!-- pause -->` | révèle la suite au pas suivant |
-| `<!-- note: … -->` | note orateur, visible seulement dans la fenêtre `P` |
-| `<!-- layout: center -->` | centre verticalement la slide |
-| `::: key` … `:::` | encadré (variantes : `key`, `warn`, `ok`, `note`, `quote`) |
-| ```` ```mermaid ```` | diagramme rendu à l'affichage |
-| ```` ```nix ```` | coloration syntaxique (js, ts, bash, nix, rust, python, json, yaml, css, html, go, c, diff, toml) |
+| `---` alone on a line | separates two slides (ignored inside code blocks) |
+| `<!-- pause -->` | reveals the rest on the next step |
+| `<!-- note: ... -->` | speaker note, visible only in the `P` window |
+| `<!-- layout: center -->` | centres the slide vertically |
+| `::: key` ... `:::` | callout (variants: `key`, `warn`, `ok`, `note`, `quote`) |
+| ```` ```mermaid ```` | diagram rendered on output |
+| ```` ```nix ```` | syntax highlighting (js, ts, bash, nix, rust, python, json, yaml, css, html, go, c, diff, toml) |
 
-Les commentaires HTML ordinaires sont retirés du rendu. Une slide est découpée en
-**blocs** (titres, paragraphes, listes, fences, encadrés, tableaux) : c'est l'unité du
-curseur et de l'édition.
+Plain HTML comments are dropped from the rendering. A slide is split into **blocks**
+(headings, paragraphs, lists, fences, callouts, tables): that is the unit of the
+cursor and of editing.
 
-## Fenêtre orateur
+## Speaker window
 
-`P` ouvre une seconde fenêtre (à mettre sur l'autre écran, hors captation) qui affiche :
+`P` opens a second window (put it on the other screen, outside the capture) showing:
 
-- les **notes** de la slide courante, en gros ;
-- la position, le nombre de pas, le chrono, l'heure ;
-- le titre de la slide **suivante**.
+- the **notes** for the current slide, in large type;
+- the position, the step count, the timer, the clock;
+- the title of the **next** slide.
 
-La synchronisation passe par `BroadcastChannel` : même origine, aucun serveur, aucun
-compte. Si la fenêtre est ouverte après coup, elle se raccroche au premier changement.
+Synchronisation goes through `BroadcastChannel`: same origin, no server, no account.
+If the window opens later, it catches up on the first change.
 
-## Captation (OBS)
+## Recording (OBS)
 
-- `?raw=1` masque le pied de scène **et le repère de paragraphe** : la scène ne montre
-  que la slide.
-- Source « navigateur » en 1920×1080 sur `http://localhost:5173/?raw=1`.
-- `f` pour le plein écran si tu captures l'écran plutôt que le navigateur.
-- `screenkey` (ou l'overlay clavier OBS) rend les raccourcis lisibles - c'est ce qui
-  donne au genre « je tape en direct » sa lisibilité.
+- `?raw=1` hides the stage footer **and the paragraph marker**: the capture only sees
+  the slide.
+- Browser source, 1920x1080, on `http://localhost:5173/?raw=1`.
+- `f` for fullscreen if you capture the screen rather than the browser.
+- `screenkey` (or the OBS keystroke overlay) makes the shortcuts readable - that is
+  what gives the "typing live" genre its legibility.
 
-Paramètres d'URL utiles :
+Useful URL parameters:
 
-| paramètre | effet |
+| parameter | effect |
 |---|---|
-| `?raw=1` | mode captation (sans pied de scène) |
-| `?slide=7` | démarrer à la slide 7 |
-| `?theme=paper` | forcer un thème |
-| `?deck=/chemin/deck.md` | charger un deck par URL |
-| `?presenter=1` | ouvrir directement la fenêtre orateur |
+| `?raw=1` | capture mode (no stage footer) |
+| `?slide=7` | start on slide 7 |
+| `?theme=paper` | force a theme |
+| `?deck=/path/deck.md` | load a deck from a URL |
+| `?presenter=1` | open the speaker window directly |
 
-## Thème et taille du texte
+## Theme and text size
 
-Quatre palettes : `ardoise` (défaut, sombre), `paper` (clair), `gruvbox`, `nord`.
+Four palettes: `ardoise` (default, dark), `paper` (light), `gruvbox`, `nord`.
 
 ```
-:theme nord        # choisir une palette
-:theme             # passer à la suivante
-:size 120          # taille du texte à 120 %
-:size +            # +5 %
-:size reset        # revenir à 100 %
+:theme nord        # pick a palette
+:theme             # cycle to the next
+:size 120          # text size at 120%
+:size +            # +5%
+:size reset        # back to 100%
 ```
 
-Au clavier, `+` et `-` ajustent la taille par pas de 5 % (80 % à 160 %).
+On the keyboard, `+` and `-` change the size in 5% steps (80% to 160%).
 
-**Le deck peut déclarer sa propre palette** dans son en-tête YAML :
+**A deck can declare its own palette** in its YAML header:
 
 ```yaml
 ---
-title: Mon sujet
+title: My talk
 theme: paper
 ---
 ```
 
-Elle s'applique à l'ouverture du deck (un `?theme=` dans l'URL reste prioritaire).
-Le choix fait ensuite avec `:theme` est mémorisé pour la session et au-delà.
+It applies when the deck loads (a `?theme=` in the URL still wins). A choice made
+afterwards with `:theme` is remembered for the session and beyond.
 
-La taille du texte ne s'applique qu'à la scène (titres, paragraphes, code, source
-éditée) : le pied de scène et les surcouches gardent leur taille, pour rester discrets
-à l'écran. Les deux réglages sont conservés dans `localStorage`.
+Text size only affects the stage (headings, paragraphs, code, the edited source): the
+stage footer and the overlays keep their size, so they stay discreet on screen. Both
+settings are kept in `localStorage`.
 
-## Ce qui est mémorisé
+## What is remembered
 
-Dans `localStorage` : le deck tel qu'édité, le thème, la dernière slide.
-`:reset` revient au deck de démonstration. Rien ne quitte le navigateur.
+In `localStorage`: the deck as edited, the theme, the last slide, the text size.
+`:reset` returns to the demo deck. Nothing leaves the browser.
 
 ## Architecture
 
 ```
 src/
-├── App.svelte            état, curseur, modes, clavier, commandes
-├── app.css               thèmes, typographie, blocs, source en place
+├── App.svelte            state, cursor, modes, keyboard, commands
+├── app.css               themes, typography, blocks, editor surface
 ├── components/
-│   ├── SlideView.svelte  liste de blocs d'une slide
-│   ├── BlockView.svelte  un bloc : rendu HTML ou source éditable
-│   ├── Chrome.svelte     pied de scène (titre, chrono, position)
-│   ├── CommandBar.svelte palette `:`
-│   ├── HelpOverlay.svelte aide générée depuis la table de raccourcis
-│   ├── Overview.svelte   vue d'ensemble (miniatures réelles)
-│   └── Presenter.svelte  fenêtre orateur (entrée séparée)
+│   ├── SlideEditor.svelte mounts the CodeMirror surface
+│   ├── SlideView.svelte  list of blocks (print and thumbnails)
+│   ├── BlockView.svelte  one block, rendered HTML
+│   ├── Chrome.svelte     stage footer (title, timer, position)
+│   ├── CommandBar.svelte the `:` palette
+│   ├── HelpOverlay.svelte help generated from the key table
+│   ├── Overview.svelte   overview (real thumbnails)
+│   └── Presenter.svelte  speaker window (separate entry point)
 └── lib/
-    ├── deck.js           parsing en blocs + édition du source par plages de lignes
-    ├── motions.js        mouvements (w, b, e, 0, $, ↑↓) et opérateurs (d, c)
+    ├── deck.js           parse into blocks + edit the source by line ranges
+    ├── livepreview.js    decorations: hidden markers, styled spans, dimming
+    ├── editor.js         CodeMirror setup, decorations, read-only compartment
+    ├── motions.js        motions (w, b, e, 0, $, up/down) and operators (d, c)
     ├── render.js         markdown-it + highlight.js + mermaid
-    ├── keys.js           table unique des raccourcis (aide incluse)
-    └── storage.js        persistance locale
+    ├── keys.js           single key table (help included)
+    └── storage.js        local persistence
 
-tests/core.test.mjs       vérifications du noyau, sans navigateur
+tests/                    node-only checks for the core and the live preview
 ```
 
-Deux principes tiennent l'ensemble :
+Two principles hold it together:
 
-1. **la table `KEYMAP`** de `lib/keys.js` alimente à la fois le gestionnaire
-   d'événements et l'aide `?` : l'aide ne peut pas mentir sur le comportement ;
-2. **l'édition remplace des lignes** : chaque bloc connaît sa plage dans le markdown,
-   donc une modification ne réécrit jamais le fichier - les notes et les pauses
-   restent intactes.
+1. **the `KEYMAP` table** in `lib/keys.js` feeds both the event handler and the `?`
+   help: the help cannot lie about behaviour;
+2. **editing replaces lines**: every block knows its range in the markdown, so an edit
+   never rewrites the file - notes and pauses stay intact.
 
-## Limites assumées
+## Known limits
 
-- **Pas de backend** : le « terminal » est une palette de commandes, pas un vrai shell.
-  Un vrai pty demanderait un serveur ; ici, tout est statique et hors-ligne.
-- **PDF** : `:export` passe par l'impression du navigateur (« Enregistrer en PDF »),
-  toutes les slides dépliées, une par page.
-- **Mermaid** est chargé à la demande (~1 Mo) et seulement s'il y a un diagramme.
-- **La fenêtre orateur** peut être bloquée par le bloqueur de pop-ups : autoriser le site.
-- **L'éditeur est CodeMirror 6** (~90 Ko gzip) : c'est ce qui rend la sélection, l'IME et
-  l'annulation fiables. Le rendu de la scène et celui du PDF ne passent pas par le même
-  moteur, donc une différence de détail reste possible entre les deux.
-- **Pas de rendu riche des blocs** (code, tableaux, diagrammes) : ils s'affichent en
-  source stylisée pendant l'édition.
-- **Pas de sélection visuelle** (`v`), pas de presse-papier interne (`y`/`p`).
-- **Pas de multi-écran synchronisé** au-delà des notes : une seule scène pilote.
+- **No backend**: the "terminal" is a command palette, not a real shell. A real pty
+  would need a server; here everything is static and offline.
+- **PDF**: `:export` goes through the browser print dialog ("Save as PDF"), every slide
+  unfolded, one per page.
+- **Mermaid** is loaded on demand (about 1 MB) and only when a diagram exists.
+- **The speaker window** can be blocked by a pop-up blocker: allow the site.
+- **The editor is CodeMirror 6** (about 90 kB gzipped): that is what makes selection,
+  IME and undo reliable. The stage and the PDF do not use the same renderer, so a
+  detail can differ between the two.
+- **No rich rendering of blocks** (code, tables, diagrams): they show as styled source
+  while editing.
+- **No visual selection** (`v`), no internal clipboard (`y`/`p`).
+- **No multi-screen sync** beyond the notes: a single stage drives everything.
 
-## Licence
+## License
 
 MIT.
