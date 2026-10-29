@@ -5,8 +5,8 @@
 
 **[Try it online](https://dbeley.github.io/ardoise/)** - nothing to install.
 
-A keyboard-driven, **modal** presentation stage. The deck is a plain markdown file:
-edit it live, with Vim keybindings, while you present. Speaker notes open in a second
+A keyboard-driven, live presentation tool. The deck is a plain markdown file:
+edit it live, with Vim keybindings, while you present. Speaker notes can be opened in a second
 window.
 
 ```
@@ -148,52 +148,3 @@ npm test           # no browser: blocks, editing, motions, live preview
 ```
 
 On NixOS: `nix develop` (Node 22 provided), then the same commands.
-
-## Architecture
-
-```
-src/
-├── App.svelte            state, cursor, modes, keyboard, commands
-├── app.css               themes, typography, blocks, editor surface
-├── components/
-│   ├── SlideEditor.svelte mounts the CodeMirror surface
-│   ├── SlideView.svelte  list of blocks (print and thumbnails)
-│   ├── BlockView.svelte  one block, rendered HTML
-│   ├── Chrome.svelte     stage footer (timer, position)
-│   ├── CommandBar.svelte the `:` palette
-│   ├── HelpOverlay.svelte help generated from the key table
-│   ├── Overview.svelte   overview (real thumbnails)
-│   └── Presenter.svelte  speaker window (separate entry point)
-└── lib/
-    ├── deck.js           parse into blocks + edit the source by line ranges
-    ├── livepreview.js    decorations: hidden markers, styled spans, dimming
-    ├── editor.js         CodeMirror setup, decorations, read-only compartment
-    ├── motions.js        motions (w, b, e, 0, $, up/down) and operators (d, c)
-    ├── render.js         markdown-it + highlight.js + mermaid
-    ├── keys.js           single key table (help included)
-    └── storage.js        local persistence
-
-tests/                    node-only checks for the core and the live preview
-```
-
-Two principles hold it together:
-
-1. **the `KEYMAP` table** in `lib/keys.js` feeds both the event handler and the `?`
-   help, so the help cannot lie about behaviour;
-2. **editing replaces lines**: every block knows its range in the markdown, so an edit
-   never rewrites the file - notes and pauses stay intact.
-
-## Limits
-
-- **No backend**: `:` is a command palette, not a real shell; everything is static and
-  offline.
-- **`dd`/`cc` work on a block**, not a line; inner lines are reached with `↑`/`↓`.
-- **Blocks are shown as styled source** (code, tables, diagrams) while editing.
-- **PDF** goes through the browser print dialog ("Save as PDF"), one slide per page.
-- **Mermaid** loads on demand (about 1 MB) and only when a diagram exists.
-- **The speaker window** can be blocked by a pop-up blocker.
-- **No visual selection** (`v`) and no internal clipboard (`y`/`p`).
-
-## License
-
-MIT.
