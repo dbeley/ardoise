@@ -53,6 +53,7 @@ export const KEYMAP = [
       { keys: ['P'], label: 'fenêtre orateur' },
       { keys: ['s'], label: 'télécharger le deck' },
       { keys: [':'], label: 'palette de commandes' },
+      { keys: ['+', '-'], label: 'taille du texte' },
       { keys: ['?'], label: 'cette aide' },
     ],
   },

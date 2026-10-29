@@ -70,6 +70,7 @@ ne bouge pas. C'est la contrainte du genre « je pense à voix haute ».
 | `P` | fenêtre orateur |
 | `s` | télécharger le deck |
 | `:` | palette de commandes |
+| `+` / `-` | taille du texte (pas de 5 %) |
 | `?` | aide clavier |
 
 `j`/`k` sont volontairement le paragraphe, pas la ligne : c'est ce qui fait coïncider
@@ -141,10 +142,35 @@ Paramètres d'URL utiles :
 | `?deck=/chemin/deck.md` | charger un deck par URL |
 | `?presenter=1` | ouvrir directement la fenêtre orateur |
 
-## Thèmes
+## Thème et taille du texte
 
-`ardoise` (défaut, sombre), `paper` (clair), `gruvbox`, `nord`.
-`:theme nord`, ou `:theme` seul pour passer au suivant. Le thème est mémorisé.
+Quatre palettes : `ardoise` (défaut, sombre), `paper` (clair), `gruvbox`, `nord`.
+
+```
+:theme nord        # choisir une palette
+:theme             # passer à la suivante
+:size 120          # taille du texte à 120 %
+:size +            # +5 %
+:size reset        # revenir à 100 %
+```
+
+Au clavier, `+` et `-` ajustent la taille par pas de 5 % (80 % à 160 %).
+
+**Le deck peut déclarer sa propre palette** dans son en-tête YAML :
+
+```yaml
+---
+title: Mon sujet
+theme: paper
+---
+```
+
+Elle s'applique à l'ouverture du deck (un `?theme=` dans l'URL reste prioritaire).
+Le choix fait ensuite avec `:theme` est mémorisé pour la session et au-delà.
+
+La taille du texte ne s'applique qu'à la scène (titres, paragraphes, code, source
+éditée) : le pied de scène et les surcouches gardent leur taille, pour rester discrets
+à l'écran. Les deux réglages sont conservés dans `localStorage`.
 
 ## Ce qui est mémorisé
 

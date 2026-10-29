@@ -34,6 +34,9 @@ export const storage = {
   theme: () => read('theme', 'ardoise'),
   saveTheme: (theme) => write('theme', theme),
 
+  scale: () => read('scale', 1),
+  saveScale: (value) => write('scale', value),
+
   slide: () => read('slide', 0),
   saveSlide: (index) => write('slide', index),
 

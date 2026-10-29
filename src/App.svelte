@@ -37,6 +37,7 @@
 
   let mode = $state('present')
   let theme = $state(THEMES.includes(params.get('theme')) ? params.get('theme') : storage.theme())
+  let typeScale = $state(clamp(Number(storage.scale()) || 1, 0.8, 1.6))
   let raw = $state(params.get('raw') === '1')
   let elapsed = $state(0)
   let running = $state(false)
@@ -104,6 +105,11 @@
   $effect(() => {
     document.documentElement.dataset.theme = theme
     storage.saveTheme(theme)
+  })
+
+  $effect(() => {
+    document.documentElement.style.setProperty('--type-scale', String(typeScale))
+    storage.saveScale(typeScale)
   })
 
   $effect(() => {
@@ -200,12 +206,14 @@
     const wanted = params.has('slide') ? Number(params.get('slide')) - 1 : storage.slide()
     slideIndex = clamp(Number.isFinite(wanted) ? wanted : 0, 0, total - 1)
     blockIndex = 0
+    applyDeckTheme(deck.meta)
 
     if (params.get('deck')) {
       try {
         const response = await fetch(params.get('deck'))
         source = await response.text()
         slideIndex = 0
+        applyDeckTheme(deck.meta)
         showToast('deck chargé depuis l’URL')
       } catch {
         showToast('deck introuvable')
@@ -483,6 +491,7 @@
     const text = await file.text()
     source = text
     history = []
+    applyDeckTheme(deck.meta)
     slideIndex = 0
     blockIndex = 0
     caret = 0
@@ -531,6 +540,42 @@
     showToast(`thème : ${wanted}`)
   }
 
+  /* Un deck peut déclarer son thème dans son en-tête : il s'applique à l'ouverture. */
+  function applyDeckTheme(meta) {
+    const fromUrl = String(params.get('theme') || '').toLowerCase()
+    if (THEMES.includes(fromUrl)) {
+      theme = fromUrl
+      return
+    }
+    const fromDeck = String(meta?.theme || '').toLowerCase()
+    if (THEMES.includes(fromDeck) && fromDeck !== theme) {
+      theme = fromDeck
+      showToast(`thème du deck : ${fromDeck}`)
+    }
+  }
+
+  const SCALE_MIN = 0.8
+  const SCALE_MAX = 1.6
+
+  function setScale(value) {
+    if (value === undefined || value === null || value === '') {
+      showToast(`taille : ${Math.round(typeScale * 100)} %`)
+      return
+    }
+    let number = Number(String(value).trim())
+    if (!Number.isFinite(number)) {
+      showToast('taille : +10, -10, 120, reset')
+      return
+    }
+    if (Math.abs(number) > 10) number /= 100
+    typeScale = Math.round(clamp(number, SCALE_MIN, SCALE_MAX) * 100) / 100
+    showToast(`taille : ${Math.round(typeScale * 100)} %`)
+  }
+
+  function bumpScale(delta) {
+    setScale(typeScale + delta)
+  }
+
   /* ---------- palette de commandes ---------- */
 
   let commands = $derived([
@@ -541,6 +586,12 @@
     { id: 'edit', key: 'edit', label: 'éditer le paragraphe', run: () => startEditing(caret, true) },
     { id: 'new', key: 'new', label: 'nouveau paragraphe', run: newParagraph },
     { id: 'theme', key: 'theme nord', label: 'changer de thème', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
+    { id: 'size', key: 'size 120', label: 'taille du texte (80–160 %)', run: (q) => {
+        const argument = q.split(/\s+/)[1]
+        if (argument === 'reset') setScale(1)
+        else if (argument) setScale(argument)
+        else showToast(`taille : ${Math.round(typeScale * 100)} %`)
+      } },
     { id: 'overview', key: 'overview', label: 'vue d’ensemble', run: () => { overviewCursor = slideIndex; mode = 'overview' } },
     { id: 'presenter', key: 'presenter', label: 'fenêtre orateur', run: openPresenter },
     { id: 'timer', key: 'timer', label: 'chrono marche / arrêt', run: toggleTimer },
@@ -814,6 +865,16 @@
       case 'P':
         event.preventDefault()
         openPresenter()
+        return
+      case '+':
+      case '=':
+        event.preventDefault()
+        bumpScale(0.05)
+        return
+      case '-':
+      case '_':
+        event.preventDefault()
+        bumpScale(-0.05)
         return
       default:
         // En mode normal, aucune touche imprimable ne doit écrire.

@@ -160,14 +160,20 @@ Le diagramme est du texte : il se modifie pendant la prise, comme le reste.
 
 ---
 
-## Les quatre thèmes
+## Thème et taille
 
 `:theme paper` pour la lumière du jour, `:theme nord`, `:theme gruvbox`.
 
 <!-- pause -->
 
+- `+` / `-` ajustent la taille du texte par pas de 5 %
+- `:size 120` la règle d'un coup, `:size reset` revient à 100 %
+- un deck peut déclarer `theme: paper` dans son en-tête
+
+<!-- pause -->
+
 ::: note
-Un thème se change en pleine prise : rien n'est rechargé, rien ne clignote.
+Les deux se changent en pleine prise : rien n'est rechargé, rien ne clignote.
 :::
 
 ---
