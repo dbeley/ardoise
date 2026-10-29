@@ -2,7 +2,7 @@
   import { onMount, tick, untrack } from 'svelte'
   import { parseDeck, applySlideRaw, serialize, slugify, scanBlocks, cursorStart } from './lib/deck.js'
   import { normalizeKey } from './lib/keys.js'
-  import { move, operatorRange, clamp } from './lib/motions.js'
+  import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
   import { setDocument, setReadOnly, setPending } from './lib/editor.js'
   import { undo as editorUndo } from '@codemirror/commands'
@@ -740,6 +740,21 @@
     })
   }
 
+  /** Tab / Shift+Tab on a list item: one nesting level (two spaces). */
+  function shiftListItem(delta) {
+    if (!view) return false
+    const change = listIndent(text(), head(), delta)
+    if (!change) return false
+    if (change.to > change.from || change.insert) {
+      view.dispatch({
+        changes: { from: change.from, to: change.to, insert: change.insert },
+        selection: { anchor: change.pos },
+      })
+    }
+    view.focus()
+    return true
+  }
+
   function onKeydown(event) {
     const key = normalizeKey(event)
     if (event.ctrlKey || event.metaKey || event.altKey) return
@@ -803,7 +818,8 @@
       if (key === 'Tab') {
         event.preventDefault()
         event.stopPropagation()
-        insertText('  ')
+        if (event.shiftKey) shiftListItem(-1)
+        else if (!shiftListItem(1)) insertText('  ')
         return
       }
       return // free typing: CodeMirror handles it
@@ -906,6 +922,10 @@
       case 'r':
         event.preventDefault()
         replaceArmed = count
+        return
+      case 'Tab':
+        event.preventDefault()
+        shiftListItem(event.shiftKey ? -1 : 1)
         return
       case 'd':
         event.preventDefault()

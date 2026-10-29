@@ -87,6 +87,14 @@ test('a numbered list keeps its numbers', () => {
   const result = buildDecorations('1. one\n2. two', [{ from: 0, to: 0 }])
   assert.equal(result.replaces.length, 0)
 })
+test('a nested bullet keeps its indent for the line decoration', () => {
+  const nested = '- one\n  - child'
+  const result = buildDecorations(nested, [{ from: 0, to: 0 }])
+  const child = result.lines.find((l) => l.line === 1)
+  assert.equal(child.className, 'cm-bullet')
+  assert.equal(child.indent, 2)
+  assert.ok(hiddenIndex(nested, result, '  - '))
+})
 
 /* ---------------- blocks ---------------- */
 

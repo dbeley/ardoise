@@ -131,7 +131,7 @@ export function buildDecorations(text, selections = []) {
       const quote = line.match(QUOTE)
 
       if (bullet) {
-        lines.push({ line: index, className: 'cm-bullet' })
+        lines.push({ line: index, className: 'cm-bullet', indent: bullet[1].length })
         if (!isActive) {
           replaces.push({ from: start, to: start + bullet[0].length })
           contentStart = bullet[0].length

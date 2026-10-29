@@ -41,6 +41,7 @@ styled source: the cursor enters them like any other block.
 | `O` | new paragraph after the current block |
 | `x` | delete a character |
 | `r` + char | replace a character (`3ra` replaces three) |
+| `Tab` / `Shift+Tab` | indent / outdent a list item (nested lists) |
 | `d` + motion | delete (`dw`, `de`, `d0`, `d$`) |
 | `d` `d` | delete the whole block |
 | `c` + motion | change (`cw`, `cc`) |

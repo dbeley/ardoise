@@ -37,6 +37,7 @@ export const KEYMAP = [
       { keys: ['O'], label: 'new paragraph after' },
       { keys: ['x'], label: 'delete character' },
       { keys: ['r'], label: 'replace a character' },
+      { keys: ['Tab'], label: 'indent / outdent a list item' },
       { keys: ['d', 'w'], label: 'delete (d + motion)' },
       { keys: ['c', 'w'], label: 'change (c + motion)' },
       { keys: ['u'], label: 'undo' },

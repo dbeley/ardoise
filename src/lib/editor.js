@@ -43,7 +43,11 @@ function decorations() {
 
     for (const entry of lines) {
       const line = state.doc.line(Math.min(entry.line + 1, state.doc.lines))
-      ranges.push(Decoration.line({ class: entry.className }).range(line.from))
+      const spec = { class: entry.className }
+      // Nested list items are drawn from their indent, since the marker and
+      // its leading spaces are hidden by the decoration.
+      if (entry.indent) spec.attributes = { style: `--list-indent: ${entry.indent}ch` }
+      ranges.push(Decoration.line(spec).range(line.from))
     }
     for (const mark of marks) {
       if (mark.to > mark.from) {

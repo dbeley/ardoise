@@ -23,6 +23,7 @@ import {
   smartNewline,
   lineStart,
   lineEnd,
+  listIndent,
 } from '../src/lib/motions.js'
 
 let passed = 0
@@ -270,6 +271,31 @@ test('enter outside a list adds a line', () => {
 test('enter in a numbered list keeps the prefix', () => {
   const result = smartNewline('1. one', 6)
   assert.equal(result.text, '1. one\n1. ')
+})
+
+/* ---------------- nested lists ---------------- */
+
+test('tab nests a list item two spaces deeper', () => {
+  assert.deepEqual(listIndent('- first', 4, 1), { from: 0, to: 0, insert: '  ', pos: 6 })
+  assert.deepEqual(listIndent('  - child', 6, 1), { from: 0, to: 0, insert: '  ', pos: 8 })
+})
+
+test('shift+tab outdents a nested item', () => {
+  assert.deepEqual(listIndent('  - child', 6, -1), { from: 0, to: 2, insert: '', pos: 4 })
+})
+
+test('a top-level item cannot be outdented further', () => {
+  assert.deepEqual(listIndent('- first', 4, -1), { from: 0, to: 0, insert: '', pos: 4 })
+})
+
+test('tab is ignored outside a list', () => {
+  assert.equal(listIndent('plain text', 3, 1), null)
+  assert.equal(listIndent('## heading', 3, 1), null)
+})
+
+test('enter keeps a nested bullet at its indent', () => {
+  const result = smartNewline('  - child', 9)
+  assert.equal(result.text, '  - child\n  - ')
 })
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)

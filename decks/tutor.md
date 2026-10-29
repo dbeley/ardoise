@@ -80,6 +80,7 @@ You do not switch between "presenting" and "editing": you change granularity.
 - `x`, `d`+motion, `c`+motion: delete, change
 - `u`: undo
 - `A`, `I`, `O`: end of line, start of line, new paragraph
+- `Tab` / `Shift+Tab`: nest or unnest a list item
 - `esc`: back to the cursor, without leaving the stage
 
 <!-- pause -->

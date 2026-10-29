@@ -1214,14 +1214,14 @@ body.is-raw .cm-selectionLayer {
 }
 
 .cm-line.cm-bullet {
-  padding-left: 1.3em;
+  padding-left: calc(1.3em + var(--list-indent, 0ch));
   position: relative;
 }
 
 .cm-line.cm-bullet::before {
   content: "•";
   position: absolute;
-  left: 0.25em;
+  left: calc(0.25em + var(--list-indent, 0ch));
   color: var(--accent);
 }
 

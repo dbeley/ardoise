@@ -199,6 +199,30 @@ export function deleteRange(text, from, to) {
 }
 
 /**
+ * Indent or outdent a list item by one level (two spaces).
+ * `delta > 0` nests the item, `delta < 0` moves it back one level.
+ * Returns the change to apply plus the cursor offset, or null when the line
+ * is not a list item (the caller can then fall back to plain spaces).
+ */
+export function listIndent(text, pos, delta = 1) {
+  const start = lineStart(text, pos)
+  const end = lineEnd(text, pos)
+  const line = text.slice(start, end)
+  const match = line.match(/^(\s*)([-*+]|\d+\.)\s/)
+  if (!match) return null
+
+  if (delta > 0) {
+    const insert = '  '.repeat(Math.max(1, Math.round(delta)))
+    return { from: start, to: start, insert, pos: Math.min(pos + insert.length, end + insert.length) }
+  }
+
+  const spaces = match[1].length
+  if (!spaces) return { from: start, to: start, insert: '', pos }
+  const remove = Math.min(2 * Math.max(1, Math.round(-delta)), spaces)
+  return { from: start, to: start + remove, insert: '', pos: Math.max(start, pos - remove) }
+}
+
+/**
  * Smart newline: inside a list, continue the bullet; otherwise a plain line.
  */
 export function smartNewline(text, pos) {
