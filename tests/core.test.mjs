@@ -148,6 +148,22 @@ test('serialize keeps the markdown intact', () => {
   assert.ok(round.includes('title: Test'))
 })
 
+test('a deck made of one comment keeps its slide', () => {
+  const parsed = parseDeck('<!-- i to type -->')
+  assert.equal(parsed.slides.length, 1)
+  assert.equal(parsed.slides[0].raw, '<!-- i to type -->')
+})
+
+test('an empty source still yields one empty slide', () => {
+  const parsed = parseDeck('')
+  assert.equal(parsed.slides.length, 1)
+  assert.equal(parsed.slides[0].raw, '')
+})
+
+test('a trailing separator still creates no slide', () => {
+  assert.equal(parseDeck('one\n\n---\n').slides.length, 1)
+})
+
 /* ---------------- motions ---------------- */
 
 const text = 'hello brave world'

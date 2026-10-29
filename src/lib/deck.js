@@ -227,9 +227,11 @@ export function parseDeck(source) {
   const { meta, body } = parseFrontmatter(source)
   const raws = splitSlides(body)
   const slides = raws.map((raw, i) => parseSlide(raw, i)).filter((s, i) => {
-    // A wholly empty slide at the end of the document is dropped.
-    return !(s.segments.length === 1 && s.segments[0] === '' && i === raws.length - 1)
+    // A wholly empty slide at the end of the document is dropped; a slide with
+    // only a comment (like the starter hint) is kept.
+    return !(s.raw === '' && i === raws.length - 1)
   })
+  if (!slides.length) slides.push(parseSlide('', 0))
   slides.forEach((s, i) => {
     s.index = i
   })
