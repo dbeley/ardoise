@@ -469,7 +469,7 @@ body {
 .slide th,
 .slide td {
   text-align: left;
-  padding: 0.6em 0.9em;
+  padding: 0.42em 0.9em;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1185,3 +1185,99 @@ kbd {
   }
 }
 
+
+/* ============================================================
+   blocs & curseur — un seul curseur, deux granularités
+   ============================================================ */
+
+.block {
+  position: relative;
+}
+
+.block + .block {
+  margin-top: 1.05em;
+}
+
+.block > p,
+.block > ul,
+.block > ol,
+.block > blockquote,
+.block > .code,
+.block > .box,
+.block > .table-wrap,
+.block > .diagram-figure,
+.block > .diagram {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.block > h1,
+.block > h2,
+.block > h3,
+.block > h4 {
+  margin-top: 0;
+}
+
+/* repère de paragraphe : discret, masqué en captation */
+.block.is-cursor:not(.block--source)::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * clamp(0.7rem, 1.6vw, 1.2rem));
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+body.is-raw .block.is-cursor:not(.block--source)::before {
+  display: none;
+}
+
+/* le paragraphe édité devient sa propre source, à la même place */
+.block--source {
+  margin-left: -0.65em;
+  padding: 0.3em 0.65em;
+  border-left: 2px solid var(--ok);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--bg-raise) 72%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 14%, transparent);
+}
+
+.block-source {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: var(--fg-dim);
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 1.28vw, 1.3rem);
+  line-height: 1.55;
+  caret-color: var(--accent);
+  tab-size: 2;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.block-source.is-heading {
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+.block-source::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--fg);
+}
+
+.block-source::placeholder {
+  color: var(--muted);
+}

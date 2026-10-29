@@ -31,7 +31,7 @@
           >
             <span class="thumb-index">{String(i + 1).padStart(2, '0')}</span>
             <div class="thumb-inner">
-              <SlideView {slide} step={0} hydrate={false} />
+              <SlideView blocks={slide.blocks} activeIndex={-1} hydrate={false} />
             </div>
             <span class="thumb-caption">{slide.title}</span>
           </button>

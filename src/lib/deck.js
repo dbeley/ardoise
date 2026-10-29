@@ -74,18 +74,121 @@ export function splitSlides(body) {
  * Extrait les directives (commentaires HTML) d'une slide brute.
  * Renvoie la slide normalisée : { raw, body, note, layout, segments[] }
  */
+export function blockKind(text) {
+  const first = text.trimStart()
+  if (/^#{1,6}\s/.test(first)) return 'heading'
+  if (/^(-|\*|\+|\d+\.)\s/m.test(first) && /^(-|\*|\+|\d+\.)\s/.test(first)) return 'list'
+  if (/^(`{3,}|~{3,})/.test(first)) return 'fence'
+  if (/^:::\s*[A-Za-z]/.test(first)) return 'box'
+  if (/^>/.test(first)) return 'quote'
+  if (/^\|/.test(first)) return 'table'
+  if (/^(-{3,}|\*{3,})$/.test(first)) return 'rule'
+  return 'para'
+}
+
+/**
+ * Découpe une slide en blocs (paragraphes, titres, listes, fences, encadrés)
+ * en conservant leur plage de lignes exacte dans le markdown de la slide.
+ *
+ * C'est cette plage qui permet d'éditer un bloc sans réécrire le fichier :
+ * on remplace des lignes, les commentaires (notes, pauses) restent intacts.
+ */
+export function scanBlocks(raw) {
+  const lines = String(raw ?? '').split('\n')
+  const blocks = []
+  let seg = 0
+  let current = null
+  let fenceChar = null
+  let inBox = false
+
+  const push = () => {
+    if (!current) return
+    const text = current.lines.join('\n').replace(/[ \t]+$/gm, '').replace(/\s+$/, '')
+    if (text.trim()) {
+      blocks.push({
+        ...current,
+        startLine: current.startLine,
+        endLine: current.endLine === null ? current.startLine : current.endLine,
+        text,
+        segIndex: seg,
+        kind: blockKind(text),
+      })
+    }
+    current = null
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]
+
+    if (fenceChar) {
+      current.lines.push(line)
+      if (new RegExp(`^\\s*${fenceChar}{3,}\\s*$`).test(line)) {
+        fenceChar = null
+        push()
+      }
+      continue
+    }
+
+    if (/^\s*(`{3,}|~{3,})/.test(line)) {
+      push()
+      fenceChar = line.trim()[0]
+      current = { lines: [line], startLine: i, endLine: null }
+      continue
+    }
+
+    if (inBox) {
+      current.lines.push(line)
+      if (/^\s*:::\s*$/.test(line)) {
+        inBox = false
+        push()
+      }
+      continue
+    }
+
+    if (/^\s*:::\s*[A-Za-z]/.test(line)) {
+      push()
+      inBox = true
+      current = { lines: [line], startLine: i, endLine: null }
+      continue
+    }
+
+    if (/^\s*<!--\s*pause\s*-->\s*$/.test(line)) {
+      push()
+      seg += 1
+      continue
+    }
+
+    if (/^\s*<!--/.test(line)) {
+      push()
+      continue
+    }
+
+    if (!line.trim()) {
+      push()
+      continue
+    }
+
+    if (!current) current = { lines: [], startLine: i, endLine: null }
+    current.lines.push(line)
+    current.endLine = i
+  }
+  push()
+
+  return { blocks, segmentCount: blocks.length ? Math.max(...blocks.map((b) => b.segIndex)) + 1 : 1 }
+}
+
+/** Extrait les directives (commentaires HTML) d'une slide brute. */
 export function parseSlide(raw, index) {
   let note = ''
   let layout = ''
   let classes = ''
 
-  // Notes orateur : <!-- note: ... --> ou <!-- note: | ... -->
   const noteRe = /<!--\s*note\s*:\s*([\s\S]*?)-->/g
   let m
   while ((m = noteRe.exec(raw))) {
     const value = m[1].replace(/^\|?\s*\n?/, '').replace(/\s+$/, '')
-    const lines = value.split('\n').map((l) => l.replace(/^\s{2,}/, ''))
-    note = (note ? note + '\n' : '') + lines.join('\n').trim()
+    const noteLines = value.split('\n').map((l) => l.replace(/^\s{2,}/, ''))
+    note = (note ? note + '\n' : '') + noteLines.join('\n').trim()
   }
 
   const layoutMatch = raw.match(/<!--\s*layout\s*:\s*([A-Za-z-]+)\s*-->/)
@@ -94,46 +197,22 @@ export function parseSlide(raw, index) {
   const classMatch = raw.match(/<!--\s*class\s*:\s*([\w\s-]+)\s*-->/)
   if (classMatch) classes = classMatch[1].trim()
 
-  const withoutNotes = raw.replace(noteRe, '')
+  const { blocks, segmentCount } = scanBlocks(raw)
+  const segments = Array.from({ length: segmentCount }, (_, s) =>
+    blocks
+      .filter((b) => b.segIndex === s)
+      .map((b) => b.text)
+      .join('\n\n')
+  )
 
-  // Passe ligne à ligne : on ne touche jamais à l'intérieur d'un bloc de code.
-  const kept = []
-  let fenceChar = null
-  for (const line of withoutNotes.split('\n')) {
-    const opening = line.match(/^\s*(`{3,}|~{3,})/)
-    if (opening) {
-      if (!fenceChar) fenceChar = opening[1][0]
-      else if (new RegExp(`^\\s*${fenceChar}{3,}\\s*$`).test(line)) fenceChar = null
-      kept.push(line)
-      continue
-    }
-    if (fenceChar) {
-      kept.push(line)
-      continue
-    }
-    if (/^\s*<!--\s*pause\s*-->\s*$/.test(line)) {
-      kept.push('@@PAUSE@@')
-      continue
-    }
-    if (/^\s*<!--\s*(layout|class)\s*:/.test(line)) continue
-    if (/^\s*<!--(?!\s*@)[\s\S]*?-->\s*$/.test(line)) continue
-    kept.push(line)
-  }
-
-  const segments = kept
-    .join('\n')
-    .split('@@PAUSE@@')
-    .map((s) => s.trim())
-    .filter((s, i, arr) => s.length > 0 || arr.length === 1)
-
-  const body = segments.join('\n\n')
-  const title = firstHeading(body) || firstHeading(raw) || `Slide ${index + 1}`
+  const title = firstHeading(blocks[0]?.text ?? '') || firstHeading(raw) || `Slide ${index + 1}`
 
   return {
     index,
     raw: raw.trim(),
-    body,
-    segments: segments.length ? segments : [''],
+    blocks,
+    segments,
+    segmentCount,
     note,
     layout,
     classes,
@@ -185,48 +264,50 @@ export function slugify(value) {
     .replace(/(^-|-$)/g, '')
 }
 
-/** Ajoute les blocs saisis en direct à la fin de la slide correspondante. */
-export function withScratch(deck, scratch) {
-  if (!scratch || !Object.keys(scratch).length) return deck
-  return {
-    ...deck,
-    slides: deck.slides.map((slide) => {
-      const extra = scratch[slide.index]
-      if (!extra || !extra.length) return slide
-      const appended = extra.join('\n')
-      const raw = `${slide.raw}\n\n${appended}`
-      const parsed = parseSlide(raw, slide.index)
-      return { ...parsed, committed: extra }
-    }),
-  }
+/** Sépare l'en-tête YAML du corps, en gardant l'en-tête tel quel. */
+export function splitHead(source) {
+  const text = String(source ?? '').replace(/\r\n?/g, '\n')
+  if (!text.startsWith('---\n')) return { head: '', body: text, eol: '\n' }
+  const end = text.indexOf('\n---', 4)
+  if (end === -1) return { head: '', body: text, eol: '\n' }
+  return { head: text.slice(0, end + 4), body: text.slice(end + 4).replace(/^\n+/, '') }
 }
 
-/**
- * Remplace le markdown d'une slide en conservant l'en-tête et les autres
- * slides telles quelles (utilisé par l'éditeur en direct).
- */
-export function replaceSlideRaw(source, index, newRaw) {
-  const text = String(source ?? '').replace(/\r\n?/g, '\n')
-  let head = ''
-  let body = text
-
-  if (text.startsWith('---\n')) {
-    const end = text.indexOf('\n---', 4)
-    if (end !== -1) {
-      head = text.slice(0, end + 4)
-      body = text.slice(end + 4).replace(/^\n+/, '')
-    }
-  }
-
+function rebuild(source, slideIndex, mutate) {
+  const { head, body } = splitHead(source)
   const raws = splitSlides(body)
-  if (index < 0 || index >= raws.length) return source
-  raws[index] = newRaw.replace(/\s+$/, '')
-
+  if (slideIndex < 0 || slideIndex >= raws.length) return source
+  const lines = raws[slideIndex].split('\n')
+  const next = mutate(lines)
+  if (next === null) return source
+  raws[slideIndex] = next.join('\n').replace(/\s+$/, '')
   return `${head}${head ? '\n' : ''}${raws.join('\n\n---\n\n')}\n`
 }
 
-/** Reconstruit un markdown propre, blocs live inclus. */
-export function serialize(deck, scratch) {
+/** Remplace les lignes d'un bloc par un nouveau texte (édition en place). */
+export function applyBlockEdit(source, slideIndex, startLine, endLine, text) {
+  return rebuild(source, slideIndex, (lines) => {
+    const replacement = String(text ?? '').split('\n')
+    const from = Math.max(0, Math.min(startLine, lines.length - 1))
+    const to = Math.max(from - 1, Math.min(endLine, lines.length - 1))
+    const copy = [...lines]
+    copy.splice(from, to - from + 1, ...replacement)
+    return copy
+  })
+}
+
+/** Insère un nouveau bloc juste après la ligne indiquée. */
+export function insertBlockAfter(source, slideIndex, afterLine, text) {
+  return rebuild(source, slideIndex, (lines) => {
+    const copy = [...lines]
+    const at = Math.max(0, Math.min(afterLine + 1, copy.length))
+    copy.splice(at, 0, '', ...String(text ?? '').split('\n'))
+    return copy
+  })
+}
+
+/** Reconstruit un markdown propre, un bloc par paragraphe. */
+export function serialize(deck) {
   const meta = deck.meta
   const head = [
     '---',
@@ -239,13 +320,5 @@ export function serialize(deck, scratch) {
     .filter((line) => line !== null)
     .join('\n')
 
-  const body = deck.slides
-    .map((slide) => {
-      const extra = scratch?.[slide.index]
-      if (!extra || !extra.length) return slide.raw
-      return `${slide.raw}\n\n${extra.join('\n')}`
-    })
-    .join('\n\n---\n\n')
-
-  return `${head}${body}\n`
+  return `${head}${deck.slides.map((slide) => slide.raw).join('\n\n---\n\n')}\n`
 }

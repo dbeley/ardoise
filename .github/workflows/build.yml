@@ -16,6 +16,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run build
       - name: Taille du bundle
         run: du -sh dist && find dist -name '*.js' | wc -l

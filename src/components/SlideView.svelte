@@ -1,16 +1,32 @@
 <script>
-  import { renderMarkdown, diagrams } from '../lib/render.js'
+  import BlockView from './BlockView.svelte'
 
-  let { slide, step = 0, revealAll = false, hydrate = true, class: extraClass = '' } = $props()
-
-  let segments = $derived(slide?.segments ?? [])
-  let visible = $derived(
-    revealAll ? segments : segments.slice(0, Math.min(step + 1, segments.length))
-  )
+  let {
+    blocks = [],
+    activeIndex = -1,
+    editing = false,
+    hydrate = true,
+    value = '',
+    textarea = $bindable(null),
+    oninput,
+    oncaret,
+    onblur,
+    class: extraClass = '',
+  } = $props()
 </script>
 
-<div class="slide {extraClass}" use:diagrams={{ hydrate }}>
-  {#each visible as segment, i (i)}
-    <div class="step">{@html renderMarkdown(segment)}</div>
+<div class="slide {extraClass}">
+  {#each blocks as block, i (i)}
+    <BlockView
+      {block}
+      active={i === activeIndex}
+      editing={editing && i === activeIndex}
+      {value}
+      {hydrate}
+      bind:textarea
+      {oninput}
+      {oncaret}
+      {onblur}
+    />
   {/each}
 </div>

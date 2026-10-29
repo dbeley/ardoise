@@ -1,12 +1,18 @@
 <script>
   import { onMount, tick } from 'svelte'
-  import { parseDeck, withScratch, serialize, replaceSlideRaw, slugify } from './lib/deck.js'
+  import {
+    parseDeck,
+    applyBlockEdit,
+    insertBlockAfter,
+    serialize,
+    slugify,
+    blockKind,
+  } from './lib/deck.js'
   import { normalizeKey, isEditableTarget } from './lib/keys.js'
+  import { move, operatorRange, deleteRange, smartNewline, clamp } from './lib/motions.js'
   import { storage, download } from './lib/storage.js'
   import SlideView from './components/SlideView.svelte'
   import Chrome from './components/Chrome.svelte'
-  import Composer from './components/Composer.svelte'
-  import Editor from './components/Editor.svelte'
   import CommandBar from './components/CommandBar.svelte'
   import HelpOverlay from './components/HelpOverlay.svelte'
   import Overview from './components/Overview.svelte'
@@ -14,13 +20,21 @@
 
   const THEMES = ['ardoise', 'paper', 'gruvbox', 'nord']
   const params = new URLSearchParams(location.search)
+  const TEXT_KEYS = ['h', 'l', 'w', 'b', 'e', '0', '$', '↑', '↓']
+
+  /* ---------- état ---------- */
 
   let source = $state(storage.deckSource() || welcome)
-  let scratch = $state(storage.scratch() || {})
-  let deck = $derived(withScratch(parseDeck(source), scratch))
+  let deck = $derived(parseDeck(source))
 
-  let index = $state(0)
-  let step = $state(0)
+  let slideIndex = $state(0)
+  let blockIndex = $state(0)
+  let caret = $state(0)
+  let editing = $state(false)
+  let insertMode = $state(false)
+  let draft = $state('')
+  let phantom = $state(null)
+
   let mode = $state('present')
   let theme = $state(THEMES.includes(params.get('theme')) ? params.get('theme') : storage.theme())
   let raw = $state(params.get('raw') === '1')
@@ -30,12 +44,52 @@
   let overviewCursor = $state(0)
   let printAll = $state(false)
   let stageEl = $state(null)
+  let textareaEl = $state(null)
 
-  let current = $derived(deck.slides[index] ?? deck.slides[0] ?? null)
-  let steps = $derived(current?.segments.length ?? 1)
+  let countBuf = ''
+  let pendingOp = null
+  let lastG = 0
+  let history = []
+
+  let slide = $derived(deck.slides[slideIndex] ?? deck.slides[0] ?? null)
+  let blocks = $derived(slide?.blocks ?? [])
   let total = $derived(deck.slides.length || 1)
+
+  let block = $derived(blocks[Math.min(blockIndex, Math.max(0, blocks.length - 1))] ?? null)
+  let seg = $derived(block?.segIndex ?? 0)
+  let segmentCount = $derived(slide?.segmentCount ?? 1)
+
+  /**
+   * Blocs réellement affichés : jusqu'au segment courant, plus le
+   * paragraphe fantôme en cours de création (`O`).
+   */
+  let viewBlocks = $derived.by(() => {
+    if (!slide) return []
+    const list = blocks.filter((b) => b.segIndex <= seg)
+    if (!phantom) return list
+
+    const ghost = {
+      text: phantom.text,
+      kind: blockKind(phantom.text || ' '),
+      phantom: true,
+      segIndex: phantom.segIndex,
+      startLine: phantom.afterLine + 2,
+      endLine: phantom.afterLine + 2,
+    }
+    const position = list.filter((b) => b.startLine <= phantom.afterLine).length
+    list.splice(Math.min(position, list.length), 0, ghost)
+    return list
+  })
+
+  let activeIndex = $derived(
+    phantom
+      ? viewBlocks.findIndex((b) => b.phantom)
+      : Math.min(blockIndex, Math.max(0, viewBlocks.length - 1))
+  )
+  let activeBlock = $derived(viewBlocks[activeIndex] ?? null)
+
   let progress = $derived(
-    Math.min(100, ((index + (steps > 1 ? step / steps : 0)) / total) * 100)
+    Math.min(100, ((slideIndex + (seg + 1) / Math.max(1, segmentCount)) / total) * 100)
   )
 
   let toastTimer = null
@@ -57,9 +111,15 @@
   })
 
   $effect(() => {
-    const wanted = index
-    storage.saveSlide(wanted)
+    storage.saveSlide(slideIndex)
   })
+
+  $effect(() => {
+    const value = source
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => storage.saveDeckSource(value), 300)
+  })
+  let saveTimer = null
 
   /* ---------- chrono ---------- */
 
@@ -103,13 +163,13 @@
   function postState() {
     channel?.postMessage({
       type: 'state',
-      index,
-      step,
-      steps,
+      index: slideIndex,
+      step: seg,
+      steps: segmentCount,
       total,
-      title: current?.title ?? '',
-      next: deck.slides[index + 1]?.title ?? '',
-      note: current?.note ?? '',
+      title: slide?.title ?? '',
+      next: deck.slides[slideIndex + 1]?.title ?? '',
+      note: slide?.note ?? '',
       elapsed,
       running,
       deckTitle: deck.meta.title,
@@ -117,10 +177,9 @@
   }
 
   $effect(() => {
-    // Toute dépendance lue ici déclenche la synchro de la fenêtre orateur.
-    void index
-    void step
-    void steps
+    void slideIndex
+    void seg
+    void segmentCount
     void total
     void elapsed
     void running
@@ -139,161 +198,279 @@
 
   onMount(async () => {
     const wanted = params.has('slide') ? Number(params.get('slide')) - 1 : storage.slide()
-    index = clampIndex(Number.isFinite(wanted) ? wanted : 0)
+    slideIndex = clamp(Number.isFinite(wanted) ? wanted : 0, 0, total - 1)
+    blockIndex = 0
 
     if (params.get('deck')) {
       try {
         const response = await fetch(params.get('deck'))
-        const text = await response.text()
-        source = text
-        index = 0
+        source = await response.text()
+        slideIndex = 0
         showToast('deck chargé depuis l’URL')
       } catch {
         showToast('deck introuvable')
       }
     }
 
-    if (!params.has('onboard') && !storage.onboarded()) {
-      mode = 'onboard'
-    } else if (params.get('raw') === '1') {
-      mode = 'present'
-    }
+    if (!params.has('onboard') && !storage.onboarded()) mode = 'onboard'
   })
 
+  /* ---------- curseur ---------- */
+
+  function pushHistory() {
+    history.push(source)
+    if (history.length > 60) history.shift()
+  }
+
+  function undo() {
+    if (!history.length) {
+      showToast('rien à annuler')
+      return
+    }
+    commitEdit()
+    source = history.pop()
+    blockIndex = clamp(blockIndex, 0, blocks.length - 1)
+    caret = clamp(caret, 0, block?.text.length ?? 0)
+    showToast('annulé')
+  }
+
+  function blockLineCount(b) {
+    return (b?.text.match(/\n/g)?.length ?? 0) + 1
+  }
+
+  async function focusCaret() {
+    await tick()
+    if (!textareaEl) return
+    textareaEl.focus({ preventScroll: true })
+    const position = clamp(caret, 0, textareaEl.value.length)
+    textareaEl.setSelectionRange(position, position)
+    scrollCursorIntoView()
+  }
+
+  async function scrollCursorIntoView() {
+    await tick()
+    const element = stageEl?.querySelector('.block.is-cursor')
+    element?.scrollIntoView({ block: 'center', behavior: 'auto' })
+  }
+
+  function startEditing(position = caret, insert = false) {
+    if (!activeBlock) {
+      newParagraph()
+      return
+    }
+    if (!editing) {
+      draft = activeBlock.text
+      editing = true
+    }
+    insertMode = insert
+    caret = clamp(position, 0, draft.length)
+    focusCaret()
+  }
+
+  /** Écrit `draft` dans le source. Ne touche à rien si rien n'a changé. */
+  function commitEdit() {
+    if (!editing) return
+    const target = activeBlock
+    const text = draft
+    editing = false
+    insertMode = false
+
+    if (target?.phantom) {
+      const anchor = phantom
+      phantom = null
+      const content = text.replace(/\s+$/, '')
+      if (!content.trim()) return
+      pushHistory()
+      source = insertBlockAfter(source, slideIndex, anchor.afterLine, content)
+      const line = anchor.afterLine + 2
+      const found = deck.slides[slideIndex].blocks.findIndex((b) => b.startLine === line)
+      if (found >= 0) blockIndex = found
+      return
+    }
+
+    if (!target || target.phantom) return
+    if (text === target.text) return
+
+    pushHistory()
+    const startLine = target.startLine
+    source = applyBlockEdit(source, slideIndex, target.startLine, target.endLine, text)
+    const next = deck.slides[slideIndex]?.blocks ?? []
+    const found = next.findIndex((b) => b.startLine === startLine)
+    blockIndex = found >= 0 ? found : clamp(blockIndex, 0, next.length - 1)
+    caret = clamp(caret, 0, next[blockIndex]?.text.length ?? 0)
+  }
+
+  function setDraft(nextText, nextCaret) {
+    if (!editing) {
+      draft = activeBlock?.text ?? ''
+      editing = true
+    }
+    draft = nextText
+    caret = clamp(nextCaret, 0, nextText.length)
+    focusCaret()
+  }
+
+  function currentText() {
+    return editing ? draft : (activeBlock?.text ?? '')
+  }
+
+  async function applyMotion(motion, count = 1) {
+    if (!activeBlock) return
+    if (!editing) {
+      draft = activeBlock.text
+      editing = true
+      insertMode = false
+    }
+    caret = move(draft, caret, motion, count)
+    await focusCaret()
+  }
+
+  function applyOperator(op, motion, count = 1) {
+    if (!activeBlock) return
+    const text = currentText()
+    const [from, to] = operatorRange(text, caret, motion, count)
+    const result = deleteRange(text, from, to)
+    setDraft(result.text, result.pos)
+    insertMode = op === 'c'
+  }
+
+  function deleteChar(count = 1) {
+    if (!activeBlock) return
+    const text = currentText()
+    const [from, to] = operatorRange(text, caret, 'l', count)
+    const result = deleteRange(text, from, to)
+    setDraft(result.text, result.pos)
+  }
+
+  function applySmartNewline() {
+    const result = smartNewline(draft, caret)
+    draft = result.text
+    caret = result.pos
+    focusCaret()
+  }
+
+  function newParagraph() {
+    commitEdit()
+    const anchor = activeBlock
+    const seed = anchor?.kind === 'list' ? '- ' : ''
+    phantom = {
+      segIndex: anchor?.segIndex ?? seg,
+      afterLine: anchor ? anchor.endLine : Math.max(0, (slide?.raw.split('\n').length ?? 1) - 1),
+      text: seed,
+    }
+    editing = true
+    insertMode = true
+    draft = seed
+    caret = seed.length
+    focusCaret()
+  }
+
   /* ---------- navigation ---------- */
-
-  function clampIndex(value) {
-    const max = Math.max(0, deck.slides.length - 1)
-    return Math.max(0, Math.min(Number(value) || 0, max))
-  }
-
-  function lastStepOf(i) {
-    return Math.max(0, (deck.slides[i]?.segments.length ?? 1) - 1)
-  }
 
   function scrollTop() {
     if (stageEl) stageEl.scrollTop = 0
   }
 
-  async function scrollToLatest() {
-    await tick()
-    if (!stageEl) return
-    if (stageEl.scrollHeight - stageEl.clientHeight > 4) {
-      stageEl.scrollTo({ top: stageEl.scrollHeight, behavior: 'smooth' })
-    }
+  function globalBlocks() {
+    const list = []
+    deck.slides.forEach((s, si) => s.blocks.forEach((b, bi) => list.push({ si, bi })))
+    return list
   }
 
-  function goTo(i) {
-    index = clampIndex(i)
-    step = 0
+  function goToSlide(target) {
+    commitEdit()
+    slideIndex = clamp(target, 0, total - 1)
+    blockIndex = 0
+    caret = 0
+    phantom = null
     scrollTop()
   }
 
+  function goToGlobalBlock(position) {
+    const list = globalBlocks()
+    const found = list[clamp(position, 0, list.length - 1)]
+    if (!found) return
+    commitEdit()
+    slideIndex = found.si
+    blockIndex = found.bi
+    caret = 0
+    scrollTop()
+  }
+
+  function nextBlock() {
+    commitEdit()
+    phantom = null
+    if (blockIndex < blocks.length - 1) {
+      blockIndex += 1
+      caret = 0
+      scrollCursorIntoView()
+    } else if (slideIndex < total - 1) {
+      goToSlide(slideIndex + 1)
+    }
+  }
+
+  function prevBlock() {
+    commitEdit()
+    phantom = null
+    if (blockIndex > 0) {
+      blockIndex -= 1
+      caret = 0
+      scrollCursorIntoView()
+    } else if (slideIndex > 0) {
+      commitEdit()
+      slideIndex -= 1
+      const previous = deck.slides[slideIndex]
+      blockIndex = Math.max(0, (previous?.blocks.length ?? 1) - 1)
+      caret = 0
+      scrollCursorIntoView()
+    }
+  }
+
+  /** Le pas suit les segments (`<!-- pause -->`), le paragraphe est plus fin. */
   function nextStep() {
-    if (step < steps - 1) {
-      step += 1
-      scrollToLatest()
-    } else if (index < total - 1) {
-      index += 1
-      step = 0
-      scrollTop()
+    commitEdit()
+    phantom = null
+    const found = blocks.findIndex((b) => b.segIndex > seg)
+    if (found >= 0) {
+      blockIndex = found
+      caret = 0
+      scrollCursorIntoView()
+    } else if (slideIndex < total - 1) {
+      goToSlide(slideIndex + 1)
     }
   }
 
   function prevStep() {
-    if (step > 0) {
-      step -= 1
-    } else if (index > 0) {
-      index -= 1
-      step = lastStepOf(index)
+    commitEdit()
+    phantom = null
+    const currentSeg = seg
+    let previous = -1
+    blocks.forEach((b, i) => {
+      if (b.segIndex < currentSeg) previous = i
+    })
+    if (previous >= 0) {
+      blockIndex = previous
+      caret = 0
+      scrollCursorIntoView()
+    } else if (slideIndex > 0) {
+      slideIndex -= 1
+      const previousSlide = deck.slides[slideIndex]
+      blockIndex = Math.max(0, (previousSlide?.blocks.length ?? 1) - 1)
+      caret = 0
+      scrollCursorIntoView()
     }
   }
 
-  function nextSlide() {
-    if (index < total - 1) {
-      index += 1
-      step = 0
-      scrollTop()
-    }
-  }
-
-  function prevSlide() {
-    if (index > 0) {
-      index -= 1
-      step = 0
-      scrollTop()
-    }
-  }
-
-  /* ---------- écriture en direct ---------- */
-
-  function openComposer() {
-    mode = 'compose'
-  }
-
-  async function commitBlock(text, kind) {
-    const markdown =
-      kind === 'puce'
-        ? text
-            .split('\n')
-            .map((line) => `- ${line}`)
-            .join('\n')
-        : kind === 'encadre'
-          ? `::: key\n${text}\n:::`
-          : text
-
-    scratch = { ...scratch, [index]: [...(scratch[index] ?? []), markdown] }
-    storage.saveScratch(scratch)
-    mode = 'present'
-    step = lastStepOf(index)
-    await tick()
-    step = lastStepOf(index)
-    await markFresh()
-    scrollToLatest()
-    showToast('bloc ancré sur la slide')
-  }
-
-  async function markFresh() {
-    await tick()
-    const stepEls = stageEl?.querySelectorAll('.slide .step')
-    const lastStep = stepEls?.[stepEls.length - 1]
-    const target = lastStep?.lastElementChild
-    if (!target) return
-    target.classList.add('fresh')
-    setTimeout(() => target.classList.remove('fresh'), 1500)
-  }
-
-  function clearScratch() {
-    if (!scratch[index]?.length) {
-      showToast('aucun bloc live sur cette slide')
-      return
-    }
-    const copy = { ...scratch }
-    delete copy[index]
-    scratch = copy
-    storage.saveScratch(scratch)
-    step = Math.min(step, lastStepOf(index))
-    showToast('blocs live effacés')
-  }
-
-  function saveEdit(text) {
-    const trimmed = text.trim()
-    if (trimmed !== (current?.raw ?? '').trim()) {
-      source = replaceSlideRaw(source, index, trimmed)
-      storage.saveDeckSource(source)
-      showToast('slide enregistrée')
-    }
-    mode = 'present'
-    step = Math.min(step, lastStepOf(index))
-  }
+  /* ---------- fichiers ---------- */
 
   function saveDeck() {
     const name = slugify(deck.meta.title) || 'ardoise'
-    download(`${name}.md`, serialize(parseDeck(source), scratch))
+    download(`${name}.md`, serialize(parseDeck(source)))
     showToast('deck exporté en markdown')
   }
 
   async function exportPdf() {
+    commitEdit()
     printAll = true
     await tick()
     await new Promise((resolve) => setTimeout(resolve, 700))
@@ -305,9 +482,11 @@
     if (!file) return
     const text = await file.text()
     source = text
-    storage.saveDeckSource(text)
-    index = 0
-    step = 0
+    history = []
+    slideIndex = 0
+    blockIndex = 0
+    caret = 0
+    phantom = null
     showToast(`deck chargé : ${file.name}`)
   }
 
@@ -318,12 +497,13 @@
   }
 
   function resetAll() {
-    scratch = {}
-    storage.saveScratch(scratch)
     storage.clearDeckSource()
     source = welcome
-    index = 0
-    step = 0
+    history = []
+    slideIndex = 0
+    blockIndex = 0
+    caret = 0
+    phantom = null
     showToast('retour au deck de démonstration')
   }
 
@@ -337,9 +517,8 @@
   }
 
   function cycleTheme() {
-    const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
-    theme = next
-    showToast(`thème : ${next}`)
+    theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
+    showToast(`thème : ${theme}`)
   }
 
   function setTheme(name) {
@@ -355,18 +534,20 @@
   /* ---------- palette de commandes ---------- */
 
   let commands = $derived([
-    { id: 'next', key: 'next', label: 'pas suivant', run: nextStep },
-    { id: 'prev', key: 'prev', label: 'pas précédent', run: prevStep },
-    { id: 'slide', key: 'slide 7', label: 'aller à la slide', run: (q) => goTo(Number(q.split(/\s+/)[1]) - 1) },
-    { id: 'compose', key: 'compose', label: 'composer un bloc en direct', run: openComposer },
-    { id: 'edit', key: 'edit', label: 'éditer la slide brute', run: () => (mode = 'edit') },
+    { id: 'next', key: 'next', label: 'paragraphe suivant', run: nextBlock },
+    { id: 'prev', key: 'prev', label: 'paragraphe précédent', run: prevBlock },
+    { id: 'step', key: 'step', label: 'pas suivant (segment)', run: nextStep },
+    { id: 'slide', key: 'slide 7', label: 'aller à la slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
+    { id: 'edit', key: 'edit', label: 'éditer le paragraphe', run: () => startEditing(caret, true) },
+    { id: 'new', key: 'new', label: 'nouveau paragraphe', run: newParagraph },
     { id: 'theme', key: 'theme nord', label: 'changer de thème', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
-    { id: 'overview', key: 'overview', label: 'vue d’ensemble', run: () => { overviewCursor = index; mode = 'overview' } },
+    { id: 'overview', key: 'overview', label: 'vue d’ensemble', run: () => { overviewCursor = slideIndex; mode = 'overview' } },
     { id: 'presenter', key: 'presenter', label: 'fenêtre orateur', run: openPresenter },
     { id: 'timer', key: 'timer', label: 'chrono marche / arrêt', run: toggleTimer },
     { id: 'timer-reset', key: 'timer reset', label: 'remettre le chrono à zéro', run: resetTimer },
     { id: 'save', key: 'save', label: 'télécharger le markdown', run: saveDeck },
     { id: 'export', key: 'export', label: 'exporter en PDF (impression)', run: exportPdf },
+    { id: 'undo', key: 'undo', label: 'annuler la dernière édition', run: undo },
     { id: 'raw', key: 'raw', label: 'masquer le pied de scène (OBS)', run: () => { raw = !raw; showToast(raw ? 'mode captation' : 'pied de scène visible') } },
     { id: 'reset', key: 'reset', label: 'revenir au deck de démo', run: resetAll },
     { id: 'help', key: 'help', label: 'aide clavier', run: () => (mode = 'help') },
@@ -380,16 +561,13 @@
     }
     const trimmed = query.trim()
     if (/^\d+$/.test(trimmed)) {
-      goTo(Number(trimmed) - 1)
+      goToSlide(Number(trimmed) - 1)
       return
     }
     showToast(`commande inconnue : ${trimmed}`)
   }
 
   /* ---------- clavier ---------- */
-
-  let countBuf = ''
-  let lastG = 0
 
   function dismissOnboarding() {
     storage.setOnboarded(true)
@@ -404,9 +582,27 @@
   }
 
   async function overviewMove(delta) {
-    overviewCursor = Math.max(0, Math.min(overviewCursor + delta, total - 1))
+    overviewCursor = clamp(overviewCursor + delta, 0, total - 1)
     await tick()
     document.querySelector('.thumb.is-active')?.scrollIntoView({ block: 'nearest' })
+  }
+
+  function listStart() {
+    const text = currentText()
+    const index = text.lastIndexOf('\n', Math.max(0, caret - 1))
+    return index === -1 ? 0 : index + 1
+  }
+
+  function listEnd() {
+    const text = currentText()
+    const index = text.indexOf('\n', caret)
+    return index === -1 ? text.length : index
+  }
+
+  function onBeforeInput(event) {
+    // En mode normal le textarea ne sert qu'à montrer le curseur :
+    // aucune frappe ne doit y entrer directement.
+    if (editing && !insertMode) event.preventDefault()
   }
 
   function onKeydown(event) {
@@ -439,12 +635,12 @@
         mode = 'present'
       } else if (key === 'entrée' || key === 'espace') {
         event.preventDefault()
-        goTo(overviewCursor)
+        goToSlide(overviewCursor)
         mode = 'present'
-      } else if (key === '→' || key === 'l' || key === 'j') {
+      } else if (key === 'l' || key === 'j' || key === '→') {
         event.preventDefault()
         overviewMove(key === 'j' ? cols : 1)
-      } else if (key === '←' || key === 'h' || key === 'k') {
+      } else if (key === 'h' || key === 'k' || key === '←') {
         event.preventDefault()
         overviewMove(key === 'k' ? -cols : -1)
       }
@@ -459,68 +655,140 @@
       return
     }
 
-    if (mode === 'compose') {
+    if (insertMode) {
       if (key === 'échap') {
         event.preventDefault()
-        mode = 'present'
+        commitEdit()
+        return
       }
-      return
+      if (key === 'entrée') {
+        event.preventDefault()
+        applySmartNewline()
+        return
+      }
+      if (key === 'Tab') {
+        event.preventDefault()
+        setDraft(`${draft.slice(0, caret)}  ${draft.slice(caret)}`, caret + 2)
+        return
+      }
+      return // frappe native, synchronisée par oninput
     }
 
-    if (mode === 'edit') return
-    if (isEditableTarget(event.target)) return
-    if (event.repeat && ['espace', 'j', 'k', 'l', 'h', 'p', 'n'].includes(key)) return
+    if (isEditableTarget(event.target) && event.target.tagName === 'INPUT') return
 
     if (/^[0-9]$/.test(key)) {
       countBuf = (countBuf + key).slice(0, 3)
       return
     }
 
+    const hadCount = countBuf !== ''
+    const count = hadCount ? Number(countBuf) : 1
+    countBuf = ''
+
+    if (pendingOp) {
+      const op = pendingOp
+      pendingOp = null
+      if (key === op) {
+        applyOperator(op, 'd', 1)
+        return
+      }
+      if (TEXT_KEYS.includes(key)) {
+        applyOperator(op, key, count)
+        return
+      }
+      showToast('mouvement non reconnu')
+      return
+    }
+
+    if (TEXT_KEYS.includes(key)) {
+      event.preventDefault()
+      applyMotion(key, count)
+      return
+    }
+
     switch (key) {
-      case 'espace':
+      case 'échap':
+        event.preventDefault()
+        if (editing) commitEdit()
+        return
       case 'j':
-      case 'l':
-      case '→':
+        event.preventDefault()
+        for (let n = 0; n < count; n += 1) nextBlock()
+        return
+      case 'k':
+        event.preventDefault()
+        for (let n = 0; n < count; n += 1) prevBlock()
+        return
+      case 'espace':
         event.preventDefault()
         nextStep()
         return
       case 'n':
         event.preventDefault()
-        nextSlide()
-        return
-      case 'k':
-      case 'h':
-      case '←':
-        event.preventDefault()
-        prevStep()
+        goToSlide(slideIndex + count)
         return
       case 'p':
         event.preventDefault()
-        prevSlide()
+        goToSlide(slideIndex - count)
         return
       case 'G':
         event.preventDefault()
-        goTo(countBuf ? Number(countBuf) - 1 : total - 1)
-        countBuf = ''
+        goToGlobalBlock(hadCount ? count - 1 : globalBlocks().length - 1)
         return
       case 'g': {
         event.preventDefault()
         const now = Date.now()
         if (now - lastG < 620) {
-          goTo(0)
+          goToGlobalBlock(0)
           lastG = 0
         } else {
           lastG = now
         }
         return
       }
-      case 'b':
+      case 'x':
+        event.preventDefault()
+        deleteChar(count)
+        return
+      case 'd':
+        event.preventDefault()
+        pendingOp = 'd'
+        return
+      case 'c':
+        event.preventDefault()
+        pendingOp = 'c'
+        return
+      case 'u':
+        event.preventDefault()
+        undo()
+        return
+      case 'i':
+        event.preventDefault()
+        startEditing(caret, true)
+        return
+      case 'a':
+        event.preventDefault()
+        startEditing(caret + 1, true)
+        return
+      case 'I':
+        event.preventDefault()
+        startEditing(listStart(), true)
+        return
+      case 'A':
+        event.preventDefault()
+        startEditing(listEnd(), true)
+        return
+      case 'O':
+        event.preventDefault()
+        newParagraph()
+        return
+      case '.':
         event.preventDefault()
         mode = 'black'
         return
       case 'o':
         event.preventDefault()
-        overviewCursor = index
+        overviewCursor = slideIndex
         mode = 'overview'
         return
       case '?':
@@ -530,18 +798,6 @@
       case ':':
         event.preventDefault()
         mode = 'command'
-        return
-      case 'c':
-        event.preventDefault()
-        openComposer()
-        return
-      case 'e':
-        event.preventDefault()
-        mode = 'edit'
-        return
-      case 'r':
-        event.preventDefault()
-        clearScratch()
         return
       case 't':
         event.preventDefault()
@@ -559,10 +815,9 @@
         event.preventDefault()
         openPresenter()
         return
-      case 'échap':
-        countBuf = ''
-        return
       default:
+        // En mode normal, aucune touche imprimable ne doit écrire.
+        if (key.length === 1) event.preventDefault()
         return
     }
   }
@@ -571,6 +826,7 @@
 
 <svelte:window
   onkeydown={onKeydown}
+  onbeforeinput={onBeforeInput}
   ondragover={(event) => event.preventDefault()}
   ondrop={onDrop}
 />
@@ -578,10 +834,27 @@
 <div class="progress-top" style="width: {progress}%"></div>
 
 <div class="stage" bind:this={stageEl} aria-live="polite">
-  <div class="slide-scroll" class:is-centered={current?.layout === 'center'}>
-    {#if current}
-      {#key index}
-        <SlideView slide={current} {step} />
+  <div
+    class="slide-scroll"
+    class:is-centered={slide?.layout === 'center'}
+    class:is-editing={editing}
+  >
+    {#if slide}
+      {#key slideIndex}
+        <SlideView
+          blocks={viewBlocks}
+          {activeIndex}
+          {editing}
+          value={draft}
+          bind:textarea={textareaEl}
+          oninput={(value, position) => {
+            draft = value
+            caret = position ?? draft.length
+          }}
+          oncaret={(position) => {
+            if (editing) caret = position
+          }}
+        />
       {/key}
     {/if}
   </div>
@@ -590,29 +863,13 @@
 <Chrome
   title={deck.meta.title}
   author={deck.meta.author}
-  index={index}
+  index={slideIndex}
   total={total}
-  {step}
-  {steps}
+  step={seg}
+  steps={segmentCount}
   {elapsed}
   {running}
-  {mode}
-/>
-
-<Composer
-  open={mode === 'compose'}
-  oncommit={commitBlock}
-  oncancel={() => (mode = 'present')}
-/>
-
-<Editor
-  open={mode === 'edit'}
-  raw={current?.raw ?? ''}
-  title={current?.title ?? ''}
-  index={index}
-  total={total}
-  onsave={saveEdit}
-  oncancel={() => (mode = 'present')}
+  mode={insertMode ? 'insertion' : editing ? 'édition' : 'present'}
 />
 
 <CommandBar
@@ -630,9 +887,9 @@
   <Overview
     slides={deck.slides}
     cursor={overviewCursor}
-    currentIndex={index}
+    currentIndex={slideIndex}
     onselect={(target) => {
-      goTo(target)
+      goToSlide(target)
       mode = 'present'
     }}
     onclose={() => (mode = 'present')}
@@ -649,30 +906,34 @@
 
 {#if mode === 'onboard'}
   <div class="overlay" role="dialog" aria-modal="true" aria-label="Prise en main">
-    <div class="panel" style="width:min(720px,94vw)">
+    <div class="panel" style="width:min(760px,94vw)">
       <div class="panel-head">
         <strong>ardoise</strong>
         <span>prise en main</span>
       </div>
       <div class="panel-body">
         <p style="margin:0 0 .4rem;color:var(--fg)">
-          Trois gestes suffisent pour animer une idée en direct.
+          Un seul curseur : tu présentes et tu édites dans la même scène.
         </p>
         <div class="onboard-list">
           <div class="onboard-row">
+            <span class="help-keys"><kbd>j</kbd> <kbd>k</kbd></span>
+            <span>paragraphe suivant / précédent — c’est aussi le rythme des slides</span>
+          </div>
+          <div class="onboard-row">
             <span class="help-keys"><kbd>espace</kbd></span>
-            <span>avancer d’un pas, puis d’une slide</span>
+            <span>pas suivant (segment <code>&lt;!-- pause --&gt;</code>)</span>
           </div>
           <div class="onboard-row">
-            <span class="help-keys"><kbd>c</kbd></span>
-            <span>écrire une idée : <kbd>entrée</kbd> l’ancre sur la slide</span>
+            <span class="help-keys"><kbd>i</kbd></span>
+            <span>éditer le paragraphe sur place, <kbd>échap</kbd> le rend de nouveau</span>
           </div>
           <div class="onboard-row">
-            <span class="help-keys"><kbd>e</kbd></span>
-            <span>éditer la slide brute, <kbd>échap</kbd> enregistre</span>
+            <span class="help-keys"><kbd>w</kbd> <kbd>b</kbd> <kbd>d</kbd><kbd>w</kbd></span>
+            <span>mot à mot, suppression — édition modale complète</span>
           </div>
           <div class="onboard-row">
-            <span class="help-keys"><kbd>?</kbd> <kbd>:</kbd> <kbd>b</kbd></span>
+            <span class="help-keys"><kbd>?</kbd> <kbd>:</kbd> <kbd>.</kbd></span>
             <span>aide, commandes, écran noir</span>
           </div>
         </div>
@@ -693,9 +954,9 @@
 
 {#if printAll}
   <div class="print-deck">
-    {#each deck.slides as slide (slide.index)}
+    {#each deck.slides as printed (printed.index)}
       <div class="print-slide">
-        <SlideView {slide} revealAll />
+        <SlideView blocks={printed.blocks} activeIndex={-1} />
       </div>
     {/each}
   </div>

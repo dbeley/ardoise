@@ -7,7 +7,7 @@ author: démo
 
 présenter en tapant, sans quitter le clavier
 
-<!-- note: Slide d'ouverture. Laisser respirer 3 secondes avant de parler. Le curseur clignote déjà sur la slide : c'est le sujet. -->
+<!-- note: Slide d'ouverture. Laisser respirer 3 secondes avant de parler. Le curseur est déjà dans la slide : c'est le sujet. -->
 
 ---
 
@@ -33,80 +33,76 @@ Trois fenêtres, c'est trois occasions de perdre le fil — et le spectateur ave
 
 ## Une seule scène
 
-Le deck, la saisie et les commandes vivent dans la même fenêtre.
+Il n'y a plus deux endroits : le curseur est **dans** la présentation.
 
 <!-- pause -->
 
-```text
-  dej  k        o        c            :
- ┌───────────┬──────────┬───────────┬──────────┐
- │   deck    │  aperçu  │  saisie   │ commande │
- └───────────┴──────────┴───────────┴──────────┘
-```
+- `j` et `k` descendent et remontent de **paragraphe** en paragraphe
+- un paragraphe, c'est un pas de slide : la navigation *est* le rythme
+- `w` `b` `h` `l` affinent jusqu'au mot et au caractère
 
 <!-- pause -->
 
 ::: key
-Un raccourci par intention : **avancer**, **écrire**, **vérifier**.
+On ne bascule pas entre « présenter » et « éditer » : on change de granularité.
 :::
 
 ---
 
-## Le geste central
+## Écrire sur place
 
-`c` ouvre le composeur. Tu tapes. `entrée` ancre le bloc sur la slide.
+`i` ouvre le paragraphe sous le curseur. Il devient sa propre source, au même endroit.
+
+<!-- pause -->
+
+```text
+  j  →  ## Un titre        i  →  ## Un ti|tre
+                                (source éditable)
+```
 
 <!-- pause -->
 
 ::: ok
-Le public voit l'idée se poser, pas le curseur trembler.
+`échap` le rend de nouveau. Aucune fenêtre ne s'ouvre, rien ne bouge autour.
 :::
+
+<!-- note: Moment de démonstration. Écrire une vraie phrase, pas un exemple. -->
+
+---
+
+## Modale, vraiment
+
+<!-- pause -->
+
+- `w` `b` `e` : mot suivant, précédent, fin
+- `0` `$` : début et fin de ligne
+- `x`, `d`+mouvement, `c`+mouvement : supprimer, changer
+- `u` : annuler
+- `A`, `I`, `O` : fin de ligne, début de ligne, nouveau paragraphe
 
 <!-- pause -->
 
 ::: note
-`tab` change le type de bloc : puce, texte, encadré.
-:::
-
-<!-- note: Moment de démonstration. Taper une vraie phrase, pas un exemple. Marquer une pause avant Entrée. -->
-
----
-
-## L'édition brute
-
-Pour reprendre une slide entière : `e`.
-
-<!-- pause -->
-
-````markdown
-## Mon titre
-
-- un point
-<!-- pause -->
-- révélé au pas suivant
-````
-
-<!-- pause -->
-
-::: warn
-`échap` **enregistre** — c'est le geste inverse du réflexe habituel.
+Les compteurs marchent : `3w`, `2x`, `d2w`.
 :::
 
 ---
 
 ## Les pas
 
-Une slide peut se déplier. C'est écrit dans le markdown, pas cliqué.
+Un paragraphe par pas, ou des groupes avec `<!-- pause -->`. C'est écrit, pas cliqué.
 
 <!-- pause -->
 
 ```markdown
+- un point
 <!-- pause -->
+- le point suivant
 ```
 
 <!-- pause -->
 
-C'est ce marqueur qui vient d'être utilisé deux fois.
+`espace` saute au groupe suivant ; `j` descend d'un seul paragraphe.
 
 ---
 
@@ -143,7 +139,7 @@ graph LR
 
 <!-- pause -->
 
-Le diagramme est du texte : il se modifie pendant la prise.
+Le diagramme est du texte : il se modifie pendant la prise, comme le reste.
 
 ---
 
@@ -151,14 +147,14 @@ Le diagramme est du texte : il se modifie pendant la prise.
 
 | touche | geste |
 |---|---|
-| `espace` `j` `l` | pas suivant |
-| `k` `h` | pas précédent |
+| `j` / `k` | paragraphe suivant / précédent |
+| `espace` | pas suivant (groupe) |
 | `n` / `p` | slide suivante / précédente |
-| `3` `G` | aller à la slide 3 |
-| `c` | composer un bloc |
-| `e` | éditer la slide brute |
-| `b` | écran noir |
-| `:` | palette de commandes |
+| `i` `a` `A` `I` `O` | écrire, sur place |
+| `w` `b` `e` | mot à mot |
+| `d` `w` · `c` `w` | supprimer · changer |
+| `u` / `échap` | annuler · valider et rendre |
+| `.` / `:` | écran noir · commandes |
 
 <!-- note: Ne pas lire la table. Montrer deux gestes, laisser l'aide faire le reste. -->
 
@@ -178,7 +174,7 @@ Un thème se change en pleine prise : rien n'est rechargé, rien ne clignote.
 
 ## Tourner proprement
 
-- `?raw=1` masque le pied de scène pour OBS
+- `?raw=1` masque le pied de scène **et le repère de paragraphe**
 - `f` passe en plein écran
 - `P` ouvre les notes sur le second écran
 - `t` lance le chrono
@@ -187,7 +183,7 @@ Un thème se change en pleine prise : rien n'est rechargé, rien ne clignote.
 <!-- pause -->
 
 ::: key
-La captation ne voit que la scène. Les notes restent de ton côté.
+En captation, on ne voit que la slide. Le curseur reste ton affaire.
 :::
 
 ---
@@ -208,4 +204,3 @@ npm run build    # dist/ statique, à ouvrir n'importe où
 ::: ok
 Le deck est un fichier texte. Une vidéo, c'est un fichier et son historique git.
 :::
-
