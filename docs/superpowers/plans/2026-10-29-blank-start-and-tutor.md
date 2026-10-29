@@ -38,7 +38,7 @@
 - Consumes: nothing new.
 - Produces: `parseDeck(source: string)` still returns `{ meta, slides, source }`; for `''` it now returns exactly one slide with `raw === ''`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```js
 test('a deck made of one comment keeps its slide', () => {
@@ -58,12 +58,12 @@ test('a trailing separator still creates no slide', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `node tests/core.test.mjs`
 Expected: FAIL on `an empty source still yields one empty slide` (`0 !== 1`); the comment test fails too because the slide is filtered out.
 
-- [ ] **Step 3: Implement in `parseDeck`**
+- [x] **Step 3: Implement in `parseDeck`**
 
 Replace the filter predicate and add the fallback after it: keep the last slide when it has raw text (a comment counts), drop it only when truly empty; then push `parseSlide('', 0)` when no slide remains.
 
@@ -76,12 +76,12 @@ Replace the filter predicate and add the fallback after it: keep the last slide 
   if (!slides.length) slides.push(parseSlide('', 0))
 ```
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `node tests/core.test.mjs`
 Expected: all checks pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/deck.js tests/core.test.mjs
@@ -100,20 +100,20 @@ git commit -m "fix(deck): always keep at least one slide"
 - Consumes: nothing.
 - Produces: no `mode === 'onboard'` path; startup still opens the tutorial deck in `present` mode (Task 3 changes the deck).
 
-- [ ] **Step 1: Delete the overlay from `src/App.svelte`**
+- [x] **Step 1: Delete the overlay from `src/App.svelte`**
 
 Remove `dismissOnboarding`, the `if (mode === 'onboard') { dismissOnboarding(); return }` block in `onKeydown`, the whole `{#if mode === 'onboard'} … {/if}` block after `{#if toastMsg}`, and in `onMount` replace the `onboard` condition (the `if (!params.has('onboard') && !storage.onboarded()) … else …` lines) with `setMode('present')`.
 
-- [ ] **Step 2: Delete the flag and the styles**
+- [x] **Step 2: Delete the flag and the styles**
 
 Remove `onboarded` and `setOnboarded` from `src/lib/storage.js`, and the `/* ---------------- onboarding ---------------- */` section from `src/app.css` (`.onboard-list`, `.onboard-row`, `.onboard-row .help-keys`).
 
-- [ ] **Step 3: Verify nothing references it**
+- [x] **Step 3: Verify nothing references it**
 
 Run: `grep -rn "onboard" src README.md`
 Expected: no output.
 
-- [ ] **Step 4: Run the tests and commit**
+- [x] **Step 4: Run the tests and commit**
 
 Run: `npm test`
 Expected: 25 + 16 checks pass.
@@ -135,7 +135,7 @@ git commit -m "feat: drop the onboarding overlay"
 - Consumes: `parseDeck('')` → one empty slide (Task 1); `adoptDeck(value, label)` (existing) bumps `docVersion`.
 - Produces: commands `:new`, `:reset` (both `newDeck`), `:paragraph` (`newParagraph`), `:tutor` (`openTutorial`).
 
-- [ ] **Step 1: Create `decks/starter.md`**
+- [x] **Step 1: Create `decks/starter.md`**
 
 Exact content, one line and a trailing newline:
 
@@ -143,13 +143,13 @@ Exact content, one line and a trailing newline:
 <!-- i to type · ? for help · :tutor for the tour -->
 ```
 
-- [ ] **Step 2: Rename the tutorial and update its last slide**
+- [x] **Step 2: Rename the tutorial and update its last slide**
 
 Run: `git mv decks/bienvenue.md decks/tutor.md`
 
 In that file, replace `Drop your own `.md` file on this window, or replace `decks/bienvenue.md`.` with `Drop your own `.md` file on this window, or start over with `:new`.`
 
-- [ ] **Step 3: Point startup at the starter**
+- [x] **Step 3: Point startup at the starter**
 
 In `src/App.svelte`, replace the `welcome` import with:
 
@@ -164,7 +164,7 @@ and the initial state with a nullish check (an empty saved deck is a valid deck)
   let source = $state(storage.deckSource() ?? starter)
 ```
 
-- [ ] **Step 4: Replace `resetAll` with `newDeck` and `openTutorial`**
+- [x] **Step 4: Replace `resetAll` with `newDeck` and `openTutorial`**
 
 ```js
   function newDeck() {
@@ -177,7 +177,7 @@ and the initial state with a nullish check (an empty saved deck is a valid deck)
   }
 ```
 
-- [ ] **Step 5: Rewire the commands**
+- [x] **Step 5: Rewire the commands**
 
 Replace the current `{ id: 'new', key: 'new', label: 'new paragraph', run: newParagraph },` entry with these three, in this order (order matters for `:new` + Enter):
 
@@ -193,13 +193,13 @@ Replace the `reset` entry with:
     { id: 'reset', key: 'reset', label: 'start over from a blank deck', run: newDeck },
 ```
 
-- [ ] **Step 6: Update the README**
+- [x] **Step 6: Update the README**
 
 - Line 32: `The app starts on a blank deck with a one-line hint. `:tutor` opens the tutorial (`decks/tutor.md`), which also documents the format.`
 - Lines 107-108: `Edits are kept in `localStorage`: you can close the tab and get your slide back.` then `:new` (or `:reset`) starts over from a blank deck; `:tutor` opens the tutorial.`
 - Line 209: `:new` (or `:reset`) starts over from a blank deck. `:tutor` opens the tutorial. Nothing leaves the browser.`
 
-- [ ] **Step 7: Verify references and run the tests**
+- [x] **Step 7: Verify references and run the tests**
 
 Run: `grep -rn "bienvenue\|resetAll\|welcome" src README.md decks`
 Expected: no output.
@@ -207,7 +207,7 @@ Expected: no output.
 Run: `npm test`
 Expected: 25 + 16 checks pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add decks/starter.md decks/tutor.md src/App.svelte README.md
