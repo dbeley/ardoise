@@ -1053,7 +1053,7 @@ body.is-raw .block.is-cursor:not(.block--source)::before {
   caret-color: var(--accent);
 }
 
-.cm-line {
+.cm-content .cm-line {
   padding: 0.1em 0;
 }
 
@@ -1079,7 +1079,7 @@ body.is-raw .cm-selectionLayer {
   font-size: calc(clamp(1rem, 1.28vw, 1.3rem) * var(--type-scale));
 }
 
-.cm-heading {
+.cm-line.cm-heading {
   color: var(--fg);
   font-weight: 700;
   line-height: 1.12;
@@ -1109,30 +1109,30 @@ body.is-raw .cm-selectionLayer {
   text-transform: uppercase;
 }
 
-.cm-bullet {
+.cm-line.cm-bullet {
   padding-left: 1.3em;
   position: relative;
 }
 
-.cm-bullet::before {
+.cm-line.cm-bullet::before {
   content: "•";
   position: absolute;
   left: 0.25em;
   color: var(--accent);
 }
 
-.cm-ordered {
+.cm-line.cm-ordered {
   padding-left: 0.2em;
 }
 
-.cm-quote {
+.cm-line.cm-quote {
   border-left: 2px solid var(--purple);
   padding-left: 1em;
   color: var(--muted);
   font-style: italic;
 }
 
-.cm-fence {
+.cm-line.cm-fence {
   background: var(--code-bg);
   border-left: 2px solid var(--accent);
   padding-left: 0.9em;
@@ -1140,12 +1140,12 @@ body.is-raw .cm-selectionLayer {
   color: var(--fg);
 }
 
-.cm-fence-open {
+.cm-line.cm-fence-open {
   border-radius: 4px 4px 0 0;
   padding-top: 0.35em;
 }
 
-.cm-fence-close {
+.cm-line.cm-fence-close {
   border-radius: 0 0 4px 4px;
   padding-bottom: 0.35em;
   color: var(--muted);
