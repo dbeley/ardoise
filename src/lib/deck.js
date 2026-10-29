@@ -179,6 +179,25 @@ export function scanBlocks(raw) {
   return { blocks, segmentCount: blocks.length ? Math.max(...blocks.map((b) => b.segIndex)) + 1 : 1 }
 }
 
+/**
+ * Where the cursor should land when a slide loads: the first real block, or
+ * the end of the raw text when the slide is only a comment (the starter hint).
+ * Landing inside a leading `<!-- note -->` would let the first keystroke
+ * mangle it.
+ */
+export function cursorStart(raw) {
+  const source = String(raw ?? '')
+  const { blocks } = scanBlocks(source)
+  if (!blocks.length) return source.length
+  let offset = 0
+  for (let line = 0; line < blocks[0].startLine; line += 1) {
+    const found = source.indexOf('\n', offset)
+    if (found === -1) return source.length
+    offset = found + 1
+  }
+  return offset
+}
+
 /** Extract directives (HTML comments) from a raw slide. */
 export function parseSlide(raw, index) {
   let note = ''

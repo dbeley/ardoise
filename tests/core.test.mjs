@@ -11,6 +11,7 @@ import {
   applyBlockEdit,
   insertBlockAfter,
   serialize,
+  cursorStart,
 } from '../src/lib/deck.js'
 import {
   nextWordStart,
@@ -162,6 +163,13 @@ test('an empty source still yields one empty slide', () => {
 
 test('a trailing separator still creates no slide', () => {
   assert.equal(parseDeck('one\n\n---\n').slides.length, 1)
+})
+
+test('the cursor starts on the first block, not inside a leading comment', () => {
+  const raw = '<!-- note: hi -->\n\n# Title'
+  assert.equal(cursorStart(raw), raw.indexOf('# Title'))
+  assert.equal(cursorStart('<!-- hint -->'), '<!-- hint -->'.length)
+  assert.equal(cursorStart(''), 0)
 })
 
 /* ---------------- motions ---------------- */

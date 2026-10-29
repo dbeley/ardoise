@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
-  import { parseDeck, applySlideRaw, serialize, slugify, scanBlocks } from './lib/deck.js'
+  import { parseDeck, applySlideRaw, serialize, slugify, scanBlocks, cursorStart } from './lib/deck.js'
   import { normalizeKey } from './lib/keys.js'
   import { move, operatorRange, clamp } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
@@ -304,10 +304,12 @@
         onChange: handleDocChange,
         onCursor: handleCursor,
       })
-      const lines = lineStarts(currentSlide.raw).length
-      const line = clamp(wantedLine < 0 ? lines - 1 : wantedLine, 0, lines - 1)
+      const raw = currentSlide.raw
+      const lines = lineStarts(raw).length
+      const last = wantedLine < 0
+      const line = clamp(last ? lines - 1 : wantedLine, 0, lines - 1)
       wantedLine = 0
-      const offset = lineStarts(currentSlide.raw)[line] ?? 0
+      const offset = last ? (lineStarts(raw)[line] ?? 0) : cursorStart(raw)
       place(offset)
       lastPending = -1
       syncPending(offset, currentSlide.raw)
