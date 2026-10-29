@@ -152,10 +152,12 @@ A diagram is text: it is edited during the take, like everything else.
 |---|---|
 | `j` / `k` | next / previous paragraph |
 | `space` | next step (group) |
-| `n` / `p` | next / previous slide |
+| `>` / `<` | next / previous slide |
+| `/` / `n` | search, then next match |
 | `i` `a` `A` `I` `O` | write, in place |
 | `w` `b` `e` | word by word |
 | `d` `w` / `c` `w` | delete / change |
+| `y` / `p` | yank, paste (`"2p` for older cuts) |
 | `u` / `esc` | undo / back to the cursor |
 | `.` / `:` | black screen / commands |
 
@@ -185,7 +187,7 @@ Both can change mid-take: nothing reloads, nothing flashes.
 
 - `?raw=1` hides the stage footer **and the paragraph marker**
 - `f` goes fullscreen
-- `P` opens the notes on your second screen
+- `M` opens the notes on your second screen
 - `t` starts the timer
 - `s` downloads the current markdown
 

@@ -28,6 +28,32 @@ export function setPending(view, offset) {
   view.dispatch({ effects: setPendingAt.of(offset) })
 }
 
+/** Search highlights for the current slide. */
+export const setFindMatches = StateEffect.define()
+const findField = StateField.define({
+  create: () => Decoration.none,
+  update(value, transaction) {
+    let next = value.map(transaction.changes)
+    for (const effect of transaction.effects) {
+      if (!effect.is(setFindMatches)) continue
+      const ranges = effect.value
+        .filter((range) => range.to > range.from)
+        .map((range) =>
+          Decoration.mark({
+            class: range.current ? 'cm-find is-current' : 'cm-find',
+          }).range(range.from, range.to)
+        )
+      next = Decoration.set(ranges, true)
+    }
+    return next
+  },
+  provide: (field) => EditorView.decorations.from(field),
+})
+
+export function setFind(view, ranges) {
+  view.dispatch({ effects: setFindMatches.of(ranges) })
+}
+
 function decorations() {
   return EditorView.decorations.compute(['doc', 'selection', pendingAt], (state) => {
     const selections = state.selection.ranges.map((range) => ({ from: range.from, to: range.to }))
@@ -145,6 +171,7 @@ export function createState(doc, { readonly = true, onChange, onCursor } = {}) {
       readOnly.of(EditorState.readOnly.of(readonly)),
       pendingAt,
       decorations(),
+      findField,
       cursorFont,
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.updateListener.of((update) => {

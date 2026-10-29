@@ -4,16 +4,25 @@
   import { normalizeKey } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
-  import { setDocument, setReadOnly, setPending } from './lib/editor.js'
+  import { setDocument, setReadOnly, setPending, setFind } from './lib/editor.js'
   import { undo as editorUndo } from '@codemirror/commands'
   import { storage, download } from './lib/storage.js'
   import { imageMarkdown, imageInsertion } from './lib/images.js'
   import { codeInsertion } from './lib/code.js'
   import { linkMarkdown, linkInsertion } from './lib/links.js'
+  import {
+    pushRegister,
+    pickRegister,
+    registerCopies,
+    charwisePaste,
+    linewisePaste,
+  } from './lib/registers.js'
+  import { findMatches, firstMatch, stepMatch } from './lib/search.js'
   import SlideView from './components/SlideView.svelte'
   import SlideEditor from './components/SlideEditor.svelte'
   import Chrome from './components/Chrome.svelte'
   import CommandBar from './components/CommandBar.svelte'
+  import SearchBar from './components/SearchBar.svelte'
   import HelpOverlay from './components/HelpOverlay.svelte'
   import Overview from './components/Overview.svelte'
   import ImageDialog from './components/ImageDialog.svelte'
@@ -50,6 +59,11 @@
   let countBuf = ''
   let pendingOp = null
   let replaceArmed = 0
+  let registers = $state([])
+  let registerIndex = 1
+  let registerArmed = false
+  let lastQuery = ''
+  let searchInitial = ''
   let lastG = 0
   let writeTimer = null
   let wantedLine = 0
@@ -337,6 +351,7 @@
     if (next !== 'insert') {
       pendingOp = null
       replaceArmed = 0
+      registerArmed = false
       countBuf = ''
     }
     if (view) {
@@ -397,6 +412,120 @@
     if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
   }
 
+  /* ---------- registers, paste, search ---------- */
+
+  /** Add text to the yank ring; `linewise` means it holds a whole block. */
+  function remember(text, linewise = false) {
+    registers = pushRegister(registers, { text, linewise })
+    if (registerIndex > registers.length) registerIndex = 1
+  }
+
+  function paste(before = false, count = 1) {
+    if (!view) return
+    const entry = pickRegister(registers, registerIndex)
+    registerIndex = 1
+    if (!entry) {
+      showToast('nothing to paste')
+      return
+    }
+
+    const value = text()
+    let change
+    if (entry.linewise) {
+      const block = docBlocks[blockIndex]
+      if (block) {
+        change = linewisePaste(
+          entry,
+          { start: lineOffset(block.startLine), end: blockEnd() },
+          { before, count }
+        )
+      } else {
+        const lead =
+          value === '' ? '' : value.endsWith('\n\n') ? '' : value.endsWith('\n') ? '\n' : '\n\n'
+        change = {
+          from: value.length,
+          insert: `${lead}${registerCopies(entry, count)}`,
+          pos: value.length + lead.length,
+        }
+      }
+    } else {
+      change = charwisePaste(value, head(), entry, { before, count })
+    }
+
+    view.dispatch({
+      changes: { from: change.from, insert: change.insert },
+      selection: { anchor: change.pos },
+    })
+    place(change.pos)
+  }
+
+  /** Clear the `hlsearch` marks without touching the text. */
+  function clearFind() {
+    if (view) setFind(view, [])
+  }
+
+  function slideSources() {
+    return deck.slides.map((s) => s.raw)
+  }
+
+  function openSearch() {
+    searchInitial = lastQuery
+    setMode('search')
+  }
+
+  async function jumpToMatch(match, matches) {
+    const raw = deck.slides[match.slideIndex]?.raw ?? ''
+    goToSlide(match.slideIndex, lineAt(lineStarts(raw), match.from))
+    await tick()
+    place(match.from)
+    if (view) {
+      setFind(
+        view,
+        matches
+          .filter((m) => m.slideIndex === match.slideIndex)
+          .map((m) => ({ from: m.from, to: m.to, current: m.from === match.from }))
+      )
+    }
+    showToast(`${matches.indexOf(match) + 1}/${matches.length}`)
+  }
+
+  async function runSearch(query) {
+    flushWrite()
+    setMode('present')
+    const needle = String(query ?? '').trim()
+    if (!needle) {
+      clearFind()
+      return
+    }
+
+    lastQuery = needle
+    const matches = findMatches(slideSources(), needle)
+    if (!matches.length) {
+      clearFind()
+      showToast(`no match: ${needle}`)
+      return
+    }
+
+    const match = firstMatch(matches, { slideIndex, from: head() })
+    await jumpToMatch(match, matches)
+  }
+
+  function searchStep(direction, count = 1) {
+    flushWrite()
+    if (!lastQuery) {
+      showToast('no search yet: /')
+      return
+    }
+    const matches = findMatches(slideSources(), lastQuery)
+    if (!matches.length) {
+      clearFind()
+      showToast(`no match: ${lastQuery}`)
+      return
+    }
+    const match = stepMatch(matches, { slideIndex, from: head() }, direction, count)
+    void jumpToMatch(match, matches)
+  }
+
   /* ---------- modal editing ---------- */
 
   function applyMotion(key, count = 1) {
@@ -408,17 +537,26 @@
     const value = text()
     let from = 0
     let to = 0
+    const linewise = key === op
 
-    if (key === op) {
+    if (linewise) {
       const block = docBlocks[blockIndex]
       if (!block) return
       from = lineOffset(block.startLine)
-      to = lineOffset(block.endLine) + (docText.split('\n')[block.endLine]?.length ?? 0)
+      to = blockEnd()
     } else {
       ;[from, to] = operatorRange(value, head(), key, count)
     }
 
     if (to <= from) return
+
+    if (op === 'y') {
+      remember(value.slice(from, to), linewise)
+      place(from)
+      return
+    }
+
+    remember(value.slice(from, to), linewise)
     view.dispatch({ changes: { from, to, insert: '' }, selection: { anchor: from } })
     place(from)
     if (op === 'c') setMode('insert')
@@ -427,11 +565,16 @@
   function deleteChar(count = 1) {
     const selection = view.state.selection.main
     if (!selection.empty) {
+      remember(text().slice(selection.from, selection.to))
       view.dispatch({ changes: { from: selection.from, to: selection.to, insert: '' } })
       return
     }
-    const [from, to] = operatorRange(text(), head(), 'l', count)
-    if (to > from) view.dispatch({ changes: { from, to, insert: '' } })
+    const value = text()
+    const [from, to] = operatorRange(value, head(), 'l', count)
+    if (to > from) {
+      remember(value.slice(from, to))
+      view.dispatch({ changes: { from, to, insert: '' } })
+    }
   }
 
   /** `r{char}`: overwrite `count` characters under the cursor, on this line. */
@@ -677,6 +820,7 @@
   let commands = $derived([
     { id: 'next', key: 'next', label: 'next paragraph', run: nextBlock },
     { id: 'prev', key: 'prev', label: 'previous paragraph', run: prevBlock },
+    { id: 'search', key: 'search', label: 'search the deck', run: openSearch },
     { id: 'step', key: 'step', label: 'next step (segment)', run: nextStep },
     { id: 'slide', key: 'slide 7', label: 'go to slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
     { id: 'edit', key: 'edit', label: 'type here (insert mode)', run: () => setMode('insert') },
@@ -822,6 +966,9 @@
       return
     }
 
+    // The search input owns every key while it is open.
+    if (mode === 'search') return
+
     if (mode === 'image' || mode === 'link') return
 
     if (mode === 'insert') {
@@ -865,6 +1012,22 @@
       return
     }
 
+    // `"` armed: the next key picks a register (1-9, 1 = most recent).
+    if (registerArmed) {
+      registerArmed = false
+      if (key === 'esc') {
+        event.preventDefault()
+        return
+      }
+      if (/^[1-9]$/.test(key)) {
+        registerIndex = Number(key)
+        return
+      }
+      event.preventDefault()
+      showToast('register: 1-9')
+      return
+    }
+
     if (/^[0-9]$/.test(key)) {
       countBuf = (countBuf + key).slice(0, 3)
       return
@@ -897,6 +1060,7 @@
     switch (key) {
       case 'esc':
         event.preventDefault()
+        clearFind()
         setMode('present')
         return
       case 'j':
@@ -913,9 +1077,21 @@
         return
       case 'n':
         event.preventDefault()
+        searchStep(1, count)
+        return
+      case 'N':
+        event.preventDefault()
+        searchStep(-1, count)
+        return
+      case '/':
+        event.preventDefault()
+        openSearch()
+        return
+      case '>':
+        event.preventDefault()
         goToSlide(slideIndex + count)
         return
-      case 'p':
+      case '<':
         event.preventDefault()
         goToSlide(slideIndex - count)
         return
@@ -940,6 +1116,26 @@
       case 'x':
         event.preventDefault()
         deleteChar(count)
+        return
+      case 'y':
+        event.preventDefault()
+        pendingOp = 'y'
+        return
+      case 'p':
+        event.preventDefault()
+        paste(false, count)
+        return
+      case 'P':
+        event.preventDefault()
+        paste(true, count)
+        return
+      case '"':
+        event.preventDefault()
+        registerArmed = true
+        return
+      case 'M':
+        event.preventDefault()
+        openPresenter()
         return
       case 'r':
         event.preventDefault()
@@ -1014,10 +1210,6 @@
         event.preventDefault()
         saveDeck()
         return
-      case 'P':
-        event.preventDefault()
-        openPresenter()
-        return
       case '+':
       case '=':
         event.preventDefault()
@@ -1076,6 +1268,14 @@
   open={mode === 'command'}
   {commands}
   onrun={runCommand}
+  onclose={() => setMode('present')}
+/>
+
+<SearchBar
+  open={mode === 'search'}
+  slides={slideSources()}
+  initial={searchInitial}
+  onsubmit={runSearch}
   onclose={() => setMode('present')}
 />
 

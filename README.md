@@ -30,7 +30,9 @@ styled source: the cursor enters them like any other block.
 |---|---|
 | `j` / `k` | next / previous paragraph |
 | `space` | next step, then next slide |
-| `n` / `p` | next / previous slide |
+| `>` / `<` | next / previous slide |
+| `/` | search the deck |
+| `n` / `N` | next / previous match |
 | `h` `l` | character |
 | `w` `b` `e` | next word, previous word, word end |
 | `0` `$` | start / end of line |
@@ -41,6 +43,9 @@ styled source: the cursor enters them like any other block.
 | `O` | new paragraph after the current block |
 | `x` | delete a character |
 | `r` + char | replace a character (`3ra` replaces three) |
+| `y` + motion | yank (`yw`, `yy` for the whole block) |
+| `p` / `P` | paste after / before the cursor (or the block) |
+| `"2p` | paste from register 2 (`"1` is the most recent) |
 | `Tab` / `Shift+Tab` | indent / outdent a list item (nested lists) |
 | `d` + motion | delete (`dw`, `de`, `d0`, `d$`) |
 | `d` `d` | delete the whole block |
@@ -51,13 +56,13 @@ styled source: the cursor enters them like any other block.
 | `o` | overview |
 | `t` | timer start / stop |
 | `f` | fullscreen |
-| `P` | speaker window |
+| `M` | speaker window |
 | `s` | download the deck |
 | `:` | command palette |
 | `+` / `-` | text size |
 | `?` | keyboard help |
 
-Counts work on motions and operators: `3w`, `2x`, `d2w`.
+Counts work on motions and operators: `3w`, `2x`, `d2w`, `3p`.
 
 ## The deck is markdown
 
@@ -88,7 +93,7 @@ theme: ardoise
 |---|---|
 | `---` alone on a line | new slide (ignored inside code blocks) |
 | `<!-- pause -->` | reveal the rest on the next step, dimmed until then |
-| `<!-- note: ... -->` | speaker note, shown only in the `P` window |
+| `<!-- note: ... -->` | speaker note, shown only in the `M` window |
 | `<!-- layout: center -->` | centre the slide vertically |
 | `::: key` ... `:::` | callout (`key`, `warn`, `ok`, `note`, `quote`) |
 | ```` ```mermaid ```` | diagram |
@@ -114,9 +119,19 @@ broken-image fallback). The image is loaded from its host each time the slide is
 `:link` asks for a URL and a text (defaults to the URL) and inserts `[text](url)` at the
 cursor.
 
+## Search, yank, paste
+
+`/` searches every slide, case-insensitively. `Enter` jumps to the first match at or
+after the cursor (changing slide if needed), `n` and `N` walk the matches and wrap
+around the deck; `esc` clears the highlights.
+
+`x`, `d` and `c` feed the yank ring, `y`/`yy` copy without deleting. `p` pastes after
+the cursor and `P` before it; a block (`dd`, `yy`) is pasted back as its own paragraph.
+The ring keeps the last nine entries: `p` uses the most recent, `"3p` the third.
+
 ## Speaker notes
 
-`P` opens a second window for the other screen: the current notes in large type, the
+`M` opens a second window for the other screen: the current notes in large type, the
 position, the step count, the timer, and the title of the next slide. It stays in sync
 through `BroadcastChannel`; no server, no account.
 
@@ -130,6 +145,7 @@ through `BroadcastChannel`; no server, no account.
 | `?deck=./deck.md` | load a deck at startup |
 | `:new` / `:reset` | start over from a blank deck |
 | `:tutor` | open the tutorial |
+| `:search` | search the deck (same as `/`) |
 | `:paragraph` | new paragraph after the current block |
 | `:image` | insert an image from a URL |
 | `:code` / `:code nix` | insert an empty code block (language optional) |

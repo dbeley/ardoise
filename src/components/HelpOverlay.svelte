@@ -5,7 +5,7 @@
 
   const SYNTAX = [
     { code: '<!-- pause -->', label: 'reveal the rest on the next step' },
-    { code: '<!-- note: … -->', label: 'speaker note (window P)' },
+    { code: '<!-- note: … -->', label: 'speaker note (window M)' },
     { code: '<!-- layout: center -->', label: 'centre the slide vertically' },
     { code: '::: key … :::', label: 'callout (key, warn, ok, note, quote)' },
     { code: '```mermaid', label: 'diagram rendered on output' },
@@ -60,7 +60,7 @@
 
       <p style="margin:1.6rem 0 0;font-size:.8rem;color:var(--muted)">
         Recording tip: <kbd>.</kbd> to talk over a black screen, <kbd>i</kbd> to write an
-        idea live, <kbd>P</kbd> for the notes on your second screen.
+        idea live, <kbd>M</kbd> for the notes on your second screen.
       </p>
     </div>
   </div>

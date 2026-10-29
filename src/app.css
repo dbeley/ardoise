@@ -800,6 +800,16 @@ kbd {
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
 }
 
+.command--search {
+  width: min(620px, 90vw);
+}
+
+.command-count {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 .command-form {
   display: flex;
   align-items: center;
@@ -1170,6 +1180,20 @@ body.is-raw .block.is-cursor:not(.block--source)::before {
 .cm-selectionBackground,
 .cm-content ::selection {
   background: color-mix(in srgb, var(--accent) 26%, transparent) !important;
+}
+
+/* search hits: every match, and the one the cursor landed on */
+.cm-find {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 2px;
+}
+
+.cm-find.is-current {
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+body.is-raw .cm-find {
+  background: transparent;
 }
 
 body.is-raw .cm-cursor,
