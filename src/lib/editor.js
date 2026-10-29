@@ -6,7 +6,7 @@
  * vim keymap perform the edits.
  */
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state'
-import { EditorView, Decoration, WidgetType, drawSelection, keymap } from '@codemirror/view'
+import { EditorView, Decoration, WidgetType, ViewPlugin, drawSelection, keymap } from '@codemirror/view'
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands'
 import { buildDecorations } from './livepreview.js'
 
@@ -65,6 +65,41 @@ function decorations() {
   })
 }
 
+/**
+ * A block cursor must be as wide as the character cell, and that cell depends
+ * on the line's font size (a heading is two to three times larger than body
+ * text). The cursor layer is outside the lines, so its `1ch` is measured with
+ * the editor's base font: give the layer the current line's font size.
+ */
+const cursorFont = ViewPlugin.fromClass(
+  class {
+    constructor(view) {
+      this.sync(view)
+    }
+
+    update(update) {
+      if (
+        update.selectionSet ||
+        update.docChanged ||
+        update.viewportChanged ||
+        update.geometryChanged
+      ) {
+        this.sync(update.view)
+      }
+    }
+
+    sync(view) {
+      const layer = view.dom.querySelector('.cm-cursorLayer')
+      if (!layer) return
+      const pos = view.state.selection.main.head
+      let node = view.domAtPos(pos).node
+      if (node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement
+      const line = node?.closest?.('.cm-line')
+      layer.style.fontSize = line ? getComputedStyle(line).fontSize : ''
+    }
+  }
+)
+
 class ImageWidget extends WidgetType {
   constructor(spec) {
     super()
@@ -110,6 +145,7 @@ export function createState(doc, { readonly = true, onChange, onCursor } = {}) {
       readOnly.of(EditorState.readOnly.of(readonly)),
       pendingAt,
       decorations(),
+      cursorFont,
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) onChange?.(update.state.doc.toString())

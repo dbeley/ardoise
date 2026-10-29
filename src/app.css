@@ -1162,6 +1162,7 @@ body.is-raw .block.is-cursor:not(.block--source)::before {
 .cm-dropCursor {
   border-left: none !important;
   width: 1ch;
+  margin-left: 0 !important;
   border-radius: 2px;
   background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
