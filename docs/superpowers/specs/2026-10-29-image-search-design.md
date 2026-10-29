@@ -16,22 +16,24 @@ the exported views, and its width can be set as a percentage.
   - search field, debounced 500 ms, minimum 2 characters, in-memory cache per query;
   - thumbnails in a grid, selection with the arrow keys, `enter` inserts, `esc` closes;
   - footer shows the selected result's title, creator and license;
-  - width field, 25 to 100%, default 100%;
+  - width control, 25 to 100%, default 100%, with a **live preview** of the selected
+    image at that width in a 16:9 pane (the stage's proportion); the preview updates as
+    the selection or the width changes;
   - "Search by Openverse" is shown in the dialog.
 - **Insertion**: if the current block is empty, its text is replaced; otherwise a new
   paragraph is inserted after the current block. The cursor lands on the line after the
   image so the widget renders immediately.
-- **Markup** (one line):
+- **Markup** (one line, no title, no caption, no credit line):
 
   ```markdown
-  ![A cat|60%](https://host.example/cat.jpg "Photo: Jane Doe - CC BY 4.0 - https://host.example/page")
+  ![A cat|60%](https://host.example/cat.jpg)
   ```
 
-  `|NN%` is the width; the link title carries the credit (creator, license, landing
-  page) so it stays in the source without appearing on stage.
+  `|NN%` is the width. The alt is the result's title, for accessibility. The width can
+  also be edited by hand in the source; the dialog is just the guided way to set it.
 - **Rendering**:
-  - `render.js` gains an `image` rule: `alt|NN%` becomes `style="width:NN%"`, the title is
-    kept, `loading="lazy"` is added; CSS keeps `max-width: 100%`.
+  - `render.js` gains an `image` rule: `alt|NN%` becomes `style="width:NN%"`,
+    `loading="lazy"` is added; CSS keeps `max-width: 100%`.
   - `livepreview.js`: on a line the cursor is not on, the whole markup is replaced by a
     widget descriptor `{ type: 'image', src, alt, width }`; on the cursor's line the
     source stays visible (the existing decoration rule).
@@ -56,9 +58,12 @@ the exported views, and its width can be set as a percentage.
 
 - **Hotlink only** (chosen): no embedding, no proxy, no downloaded copies.
 - **Width syntax** `![alt|NN%](url)`, parsed by one helper shared by the renderer and the
-  live preview.
-- **Credit in the link title**, so the deck stays visually clean while the attribution
-  remains in the markdown.
+  live preview; the dialog sets it, the source remains editable by hand.
+- **No title, caption or credit line** is inserted: the image is just the image. The
+  creator and license stay visible in the dialog at selection time; some CC licenses
+  formally require attribution, so the dialog tells the user what they picked.
+- **Width preview in the dialog** in a 16:9 pane, so the chosen percentage is judged
+  before insertion.
 - **One provider** (Openverse), hidden behind `searchImages()` so it can be swapped
   later.
 
@@ -82,6 +87,8 @@ the exported views, and its width can be set as a percentage.
 
 - A broken or slow image URL must not break the editor or the presentation.
 - A search burst must stay under 20 requests/min (debounce and cache actually used).
+- The dialog preview must match the width the slide will actually use.
 - The cursor's line must keep showing the markup, not the widget.
 - Motions, counts and `dd` must behave on a line that contains a widget elsewhere.
 - The search query is the only thing sent to Openverse; nothing else leaves the browser.
+- Only `![alt|NN%](url)` is inserted: no title, no credit line, no extra blank line.
