@@ -202,8 +202,7 @@
       }
     }
 
-    if (!params.has('onboard') && !storage.onboarded()) mode = 'onboard'
-    else setMode('present')
+    setMode('present')
   })
 
   /* ---------- document ---------- */
@@ -628,11 +627,6 @@
 
   /* ---------- keyboard ---------- */
 
-  function dismissOnboarding() {
-    storage.setOnboarded(true)
-    setMode('present')
-  }
-
   function gridColumns() {
     const grid = document.querySelector('.overview-grid')
     if (!grid) return 1
@@ -670,11 +664,6 @@
   function onKeydown(event) {
     const key = normalizeKey(event)
     if (event.ctrlKey || event.metaKey || event.altKey) return
-
-    if (mode === 'onboard') {
-      dismissOnboarding()
-      return
-    }
 
     if (mode === 'black') {
       event.preventDefault()
@@ -971,54 +960,6 @@
 
 {#if toastMsg}
   <div class="toast">{toastMsg}</div>
-{/if}
-
-{#if mode === 'onboard'}
-  <div class="overlay" role="dialog" aria-modal="true" aria-label="Prise en main">
-    <div class="panel" style="width:min(760px,94vw)">
-      <div class="panel-head">
-        <strong>ardoise</strong>
-        <span>getting started</span>
-      </div>
-      <div class="panel-body">
-        <p style="margin:0 0 .4rem;color:var(--fg)">
-          One mode only: the text is already on screen, and the cursor is in it.
-        </p>
-        <div class="onboard-list">
-          <div class="onboard-row">
-            <span class="help-keys"><kbd>j</kbd> <kbd>k</kbd></span>
-            <span>next / previous paragraph - this is also the rhythm of the slides</span>
-          </div>
-          <div class="onboard-row">
-            <span class="help-keys"><kbd>espace</kbd></span>
-            <span>next step: the pending text lights up</span>
-          </div>
-          <div class="onboard-row">
-            <span class="help-keys"><kbd>i</kbd></span>
-            <span>type into the styled text, <kbd>esc</kbd> returns to the cursor</span>
-          </div>
-          <div class="onboard-row">
-            <span class="help-keys"><kbd>w</kbd> <kbd>b</kbd> <kbd>d</kbd><kbd>w</kbd></span>
-            <span>word by word, delete - markdown reappears under the cursor</span>
-          </div>
-          <div class="onboard-row">
-            <span class="help-keys"><kbd>?</kbd> <kbd>:</kbd> <kbd>.</kbd></span>
-            <span>help, commands, black screen</span>
-          </div>
-        </div>
-        <p style="margin:0;font-size:.78rem;color:var(--muted)">
-          Drop a <code>.md</code> file on the window, or <code>:open</code> to import one.
-        </p>
-        <button
-          type="button"
-          onclick={dismissOnboarding}
-          style="margin-top:1.2rem;background:var(--accent-soft);color:var(--fg);border:1px solid var(--accent);border-radius:3px;padding:.5rem 1rem;font-family:inherit;font-size:.8rem;cursor:pointer"
-        >
-          start
-        </button>
-      </div>
-    </div>
-  </div>
 {/if}
 
 {#if printAll}

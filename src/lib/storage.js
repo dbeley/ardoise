@@ -39,9 +39,6 @@ export const storage = {
 
   slide: () => read('slide', 0),
   saveSlide: (index) => write('slide', index),
-
-  onboarded: () => read('onboarded', false),
-  setOnboarded: (value) => write('onboarded', value),
 }
 
 export function download(filename, text) {
