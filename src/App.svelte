@@ -932,8 +932,6 @@
 </div>
 
 <Chrome
-  title={deck.meta.title}
-  author={deck.meta.author}
   index={slideIndex}
   total={total}
   step={seg}

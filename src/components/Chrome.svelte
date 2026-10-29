@@ -1,7 +1,5 @@
 <script>
   let {
-    title = '',
-    author = '',
     index = 0,
     total = 1,
     step = 0,
@@ -23,11 +21,6 @@
 </script>
 
 <footer class="chrome">
-  <span class="chrome-title">{title}</span>
-  {#if author}
-    <span class="chrome-sep">/</span>
-    <span>{author}</span>
-  {/if}
   <span class="chrome-right">
     {#if mode !== 'present'}
       <span class="chrome-mode">{mode}</span>

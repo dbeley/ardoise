@@ -218,7 +218,7 @@ src/
 │   ├── SlideEditor.svelte mounts the CodeMirror surface
 │   ├── SlideView.svelte  list of blocks (print and thumbnails)
 │   ├── BlockView.svelte  one block, rendered HTML
-│   ├── Chrome.svelte     stage footer (title, timer, position)
+│   ├── Chrome.svelte     stage footer (timer, position)
 │   ├── CommandBar.svelte the `:` palette
 │   ├── HelpOverlay.svelte help generated from the key table
 │   ├── Overview.svelte   overview (real thumbnails)
