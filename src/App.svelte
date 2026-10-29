@@ -48,6 +48,7 @@
 
   let countBuf = ''
   let pendingOp = null
+  let replaceArmed = 0
   let lastG = 0
   let writeTimer = null
   let wantedLine = 0
@@ -332,6 +333,11 @@
 
   function setMode(next) {
     mode = next
+    if (next !== 'insert') {
+      pendingOp = null
+      replaceArmed = 0
+      countBuf = ''
+    }
     if (view) {
       setReadOnly(view, next !== 'insert')
       view.focus()
@@ -425,6 +431,19 @@
     }
     const [from, to] = operatorRange(text(), head(), 'l', count)
     if (to > from) view.dispatch({ changes: { from, to, insert: '' } })
+  }
+
+  /** `r{char}`: overwrite `count` characters under the cursor, on this line. */
+  function replaceChars(char, count = 1) {
+    if (!view || char.length !== 1) return
+    const from = head()
+    const to = Math.min(from + Math.max(1, count), lineEnd())
+    if (to <= from) return
+    view.dispatch({
+      changes: { from, to, insert: char.repeat(to - from) },
+      selection: { anchor: from },
+    })
+    view.focus()
   }
 
   function newParagraph() {
@@ -793,6 +812,21 @@
     // Normal mode: the keyboard is ours, CodeMirror sees nothing.
     event.stopPropagation()
 
+    // `r` armed: the next key is the replacement character, not a command.
+    if (replaceArmed) {
+      if (key === 'esc') {
+        event.preventDefault()
+        replaceArmed = 0
+        return
+      }
+      if (key.length !== 1 && key !== 'espace') return // bare modifiers
+      const times = replaceArmed
+      replaceArmed = 0
+      event.preventDefault()
+      replaceChars(key === 'espace' ? ' ' : key, times)
+      return
+    }
+
     if (/^[0-9]$/.test(key)) {
       countBuf = (countBuf + key).slice(0, 3)
       return
@@ -868,6 +902,10 @@
       case 'x':
         event.preventDefault()
         deleteChar(count)
+        return
+      case 'r':
+        event.preventDefault()
+        replaceArmed = count
         return
       case 'd':
         event.preventDefault()

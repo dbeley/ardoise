@@ -5,12 +5,12 @@
  * optional width as a percentage: `![alt|60%](https://host/x.jpg)`.
  */
 
-/** A width is a percentage between 25 and 100. */
+/** A width is a percentage between 1 and 100. */
 export function parseWidth(value) {
   const match = String(value ?? '').trim().match(/^(\d{1,3})%$/)
   if (!match) return null
   const number = Number(match[1])
-  return number >= 25 && number <= 100 ? number : null
+  return number >= 1 && number <= 100 ? number : null
 }
 
 /** Split `alt|60%` into its alt and width. */

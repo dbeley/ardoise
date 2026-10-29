@@ -1157,9 +1157,13 @@ body.is-raw .block.is-cursor:not(.block--source)::before {
   padding: 0.1em 0;
 }
 
+/* block cursor: a full cell over the character, like a terminal caret */
 .cm-cursor,
 .cm-dropCursor {
-  border-left: 2px solid var(--accent) !important;
+  border-left: none !important;
+  width: 1ch;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .cm-selectionBackground,

@@ -25,11 +25,15 @@ const test = async (name, fn) => {
   }
 }
 
-await test('a width is a percentage between 25 and 100', () => {
+await test('a width is a percentage between 1 and 100', () => {
   assert.equal(parseWidth('60%'), 60)
+  assert.equal(parseWidth('30%'), 30)
   assert.equal(parseWidth('25%'), 25)
+  assert.equal(parseWidth('20%'), 20)
+  assert.equal(parseWidth('5%'), 5)
+  assert.equal(parseWidth('1%'), 1)
   assert.equal(parseWidth('100%'), 100)
-  assert.equal(parseWidth('24%'), null)
+  assert.equal(parseWidth('0%'), null)
   assert.equal(parseWidth('101%'), null)
   assert.equal(parseWidth('60'), null)
 })

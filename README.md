@@ -40,6 +40,7 @@ styled source: the cursor enters them like any other block.
 | `i` `a` `A` `I` | insert: before, after, end of line, start of line |
 | `O` | new paragraph after the current block |
 | `x` | delete a character |
+| `r` + char | replace a character (`3ra` replaces three) |
 | `d` + motion | delete (`dw`, `de`, `d0`, `d$`) |
 | `d` `d` | delete the whole block |
 | `c` + motion | change (`cw`, `cc`) |
@@ -105,7 +106,7 @@ code, callouts, tables); the block is the unit of the cursor, of navigation and 
 ![A cat|60%](https://host.example/cat.jpg)
 ```
 
-`|60%` is optional (25-100, default 100) and can be edited by hand. The dialog previews
+`|60%` is optional (1-100, default 100) and can be edited by hand. The dialog previews
 the image at the chosen width; the description field is optional (accessibility and the
 broken-image fallback). The image is loaded from its host each time the slide is shown.
 

@@ -36,6 +36,7 @@ export const KEYMAP = [
       { keys: ['I'], label: 'type at start of line' },
       { keys: ['O'], label: 'new paragraph after' },
       { keys: ['x'], label: 'delete character' },
+      { keys: ['r'], label: 'replace a character' },
       { keys: ['d', 'w'], label: 'delete (d + motion)' },
       { keys: ['c', 'w'], label: 'change (c + motion)' },
       { keys: ['u'], label: 'undo' },

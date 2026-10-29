@@ -100,7 +100,7 @@
         <div class="image-controls">
           <label>
             width
-            <input type="range" min="25" max="100" step="5" bind:value={width} />
+            <input type="range" min="5" max="100" step="5" bind:value={width} />
             <span>{width}%</span>
           </label>
         </div>
