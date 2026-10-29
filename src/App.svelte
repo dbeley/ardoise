@@ -755,6 +755,9 @@
       const op = pendingOp
       pendingOp = null
       if (key === op || TEXT_KEYS.includes(key)) {
+        // `c` switches to insert mode during this same keydown: without this,
+        // the browser's default action types the motion key (cw -> "w").
+        event.preventDefault()
         applyOperator(op, key, count)
         return
       }
