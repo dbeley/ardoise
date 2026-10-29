@@ -630,6 +630,145 @@ body.is-raw {
   padding: 1.2rem 1.3rem 1.4rem;
 }
 
+/* ---------------- image search ---------------- */
+
+.image-search {
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.6rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.image-search:focus {
+  border-color: var(--accent);
+}
+
+.image-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.image-results {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+  align-content: start;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.image-thumb {
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+}
+
+.image-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-thumb.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.image-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.image-preview img {
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.image-empty,
+.image-error {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0.3rem 0;
+}
+
+.image-error {
+  color: var(--accent);
+}
+
+.image-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+}
+
+.image-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.image-controls input[type='range'] {
+  accent-color: var(--accent);
+}
+
+.image-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.image-credit {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.image-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.image-actions button {
+  background: var(--accent-soft);
+  color: var(--fg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 0.45rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.image-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* ---------------- keyboard help ---------------- */
 
 .help-grid {
