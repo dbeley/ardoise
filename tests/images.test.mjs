@@ -10,7 +10,6 @@ import {
   parseImageLine,
   imageMarkdown,
   imageInsertion,
-  searchImages,
 } from '../src/lib/images.js'
 import { scanBlocks } from '../src/lib/deck.js'
 
@@ -73,61 +72,6 @@ await test('an image after a block does not add a blank line', () => {
   const { at, insert } = imageInsertion(source, 4, '![img](u.jpg)')
   const next = source.slice(0, at) + insert + source.slice(at)
   assert.equal(next, 'text\n\n![img](u.jpg)\n\nrest')
-})
-
-const payload = {
-  results: [
-    {
-      id: '1',
-      title: 'A cat',
-      url: 'https://x/y.jpg',
-      thumbnail: 'https://x/t.jpg',
-      creator: 'Jane',
-      license: 'by',
-      license_version: '4.0',
-      foreign_landing_url: 'https://x/page',
-      width: 800,
-      height: 600,
-    },
-  ],
-}
-const fakeFetch = (status = 200, body = payload) => {
-  let calls = 0
-  const impl = async () => {
-    calls += 1
-    return { ok: status < 400, status, json: async () => body }
-  }
-  impl.calls = () => calls
-  return impl
-}
-
-await test('results are normalised', async () => {
-  const [result] = await searchImages('cat', { fetchImpl: fakeFetch() })
-  assert.equal(result.title, 'A cat')
-  assert.equal(result.src, 'https://x/y.jpg')
-  assert.equal(result.width, 800)
-  assert.equal(result.license, 'BY')
-})
-
-await test('a one-letter query does not search', async () => {
-  const impl = fakeFetch()
-  assert.deepEqual(await searchImages('c', { fetchImpl: impl }), [])
-  assert.equal(impl.calls(), 0)
-})
-
-await test('a query is cached', async () => {
-  const impl = fakeFetch()
-  const query = `cached-${Math.random()}`
-  await searchImages(query, { fetchImpl: impl })
-  await searchImages(query, { fetchImpl: impl })
-  assert.equal(impl.calls(), 1)
-})
-
-await test('a 429 is a rate limit', async () => {
-  await assert.rejects(
-    () => searchImages(`limited-${Math.random()}`, { fetchImpl: fakeFetch(429, {}) }),
-    (error) => error.kind === 'rate-limit'
-  )
 })
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)

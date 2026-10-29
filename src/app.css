@@ -635,10 +635,15 @@ body.is-raw {
   padding: 1.2rem 1.3rem 1.4rem;
 }
 
-/* ---------------- image search ---------------- */
+/* ---------------- dialogs (image, link) ---------------- */
 
-.image-search {
+.panel--small {
+  width: min(560px, 94vw);
+}
+
+.dialog-input {
   width: 100%;
+  margin-bottom: 0.6rem;
   background: var(--bg);
   color: var(--fg);
   border: 1px solid var(--line);
@@ -649,46 +654,8 @@ body.is-raw {
   outline: none;
 }
 
-.image-search:focus {
+.dialog-input:focus {
   border-color: var(--accent);
-}
-
-.image-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-  margin-top: 0.9rem;
-}
-
-.image-results {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
-  align-content: start;
-  max-height: 46vh;
-  overflow-y: auto;
-}
-
-.image-thumb {
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: var(--bg-soft);
-  overflow: hidden;
-  aspect-ratio: 16 / 9;
-  cursor: pointer;
-}
-
-.image-thumb img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.image-thumb.is-active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .image-preview {
@@ -696,6 +663,7 @@ body.is-raw {
   align-items: center;
   justify-content: center;
   aspect-ratio: 16 / 9;
+  margin-top: 0.3rem;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -706,15 +674,10 @@ body.is-raw {
   max-width: 100%;
 }
 
-.image-empty,
-.image-error {
+.image-empty {
   color: var(--muted);
   font-size: 0.8rem;
   margin: 0.3rem 0;
-}
-
-.image-error {
-  color: var(--accent);
 }
 
 .image-controls {
@@ -737,25 +700,19 @@ body.is-raw {
   accent-color: var(--accent);
 }
 
-.image-meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
+.dialog-error {
+  color: var(--accent);
+  font-size: 0.8rem;
+  margin: 0.6rem 0 0;
 }
 
-.image-credit {
-  margin-left: auto;
-  color: var(--muted);
-}
-
-.image-actions {
+.dialog-actions {
   display: flex;
   gap: 0.6rem;
   margin-top: 0.9rem;
 }
 
-.image-actions button {
+.dialog-actions button {
   background: var(--accent-soft);
   color: var(--fg);
   border: 1px solid var(--accent);
@@ -768,7 +725,7 @@ body.is-raw {
   cursor: pointer;
 }
 
-.image-actions button:disabled {
+.dialog-actions button:disabled {
   opacity: 0.45;
   cursor: default;
 }

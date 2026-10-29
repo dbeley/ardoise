@@ -29,11 +29,11 @@ editable.
 ## Scope
 
 In scope: markdown rendering, the cursor and its motions, editing, export, themes,
-keyboard accessibility, and optional network features such as image search.
+keyboard accessibility, and remote images.
 
 Deliberately out of scope: backend, accounts, real-time collaboration, telemetry. The
-core must stay a static folder that works offline; network features (image search) are
-optional and must degrade gracefully when offline.
+core must stay a static folder that works offline; remote images are optional and must
+degrade gracefully when offline.
 
 ## Style
 

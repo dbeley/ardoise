@@ -99,16 +99,15 @@ code, callouts, tables); the block is the unit of the cursor, of navigation and 
 
 ## Images
 
-`:image` searches [Openverse](https://openverse.org) (free, no key) and inserts the
-chosen picture as markdown, hotlinked from its host:
+`:image` asks for an image URL and inserts it as markdown, hotlinked from its host:
 
 ```markdown
 ![A cat|60%](https://host.example/cat.jpg)
 ```
 
-`|60%` is optional (25-100, default 100) and can be edited by hand. The dialog shows the
-creator and license of the result. The search needs the network; the image itself is
-loaded from its host each time the slide is shown.
+`|60%` is optional (25-100, default 100) and can be edited by hand. The dialog previews
+the image at the chosen width; the description field is optional (accessibility and the
+broken-image fallback). The image is loaded from its host each time the slide is shown.
 
 ## Speaker notes
 
@@ -127,7 +126,7 @@ through `BroadcastChannel`; no server, no account.
 | `:new` / `:reset` | start over from a blank deck |
 | `:tutor` | open the tutorial |
 | `:paragraph` | new paragraph after the current block |
-| `:image` | insert an image from the web |
+| `:image` | insert an image from a URL |
 | `s` | download the deck as markdown |
 | `:export` | PDF through the browser print dialog |
 | `:theme nord` | palette: `ardoise`, `paper`, `gruvbox`, `nord` |
