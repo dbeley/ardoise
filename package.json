@@ -1,7 +1,7 @@
 {
   "name": "ardoise",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Scène de présentation pilotée au clavier - deck markdown, saisie en direct, tout-en-un.",
   "scripts": {
@@ -21,6 +21,6 @@
     "@codemirror/view": "^6.43.15",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
-    "mermaid": "^11.12.2"
+    "mermaid": "^12.2.0"
   }
 }
