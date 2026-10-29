@@ -75,6 +75,8 @@
   }
 
   function onkeydown(event) {
+    const isRange = event.target instanceof HTMLInputElement && event.target.type === 'range'
+    if (isRange && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) return
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()
@@ -101,7 +103,7 @@
 </script>
 
 {#if open}
-  <div class="overlay" role="dialog" aria-modal="true" aria-label="Insert an image">
+  <div class="overlay" role="dialog" aria-modal="true" aria-label="Insert an image" tabindex="-1" {onkeydown}>
     <div class="panel">
       <div class="panel-head">
         <strong>image</strong>
@@ -117,7 +119,6 @@
           autocomplete="off"
           placeholder="search images…"
           aria-label="Image search"
-          {onkeydown}
         />
 
         <div class="image-layout">
@@ -128,7 +129,10 @@
                 class="image-thumb"
                 class:is-active={i === index}
                 aria-selected={i === index}
-                onclick={() => (index = i)}
+                onclick={() => {
+                  index = i
+                  input?.focus()
+                }}
                 onmouseenter={() => (index = i)}
               >
                 <img src={result.thumbnail} alt={result.title} loading="lazy" />
