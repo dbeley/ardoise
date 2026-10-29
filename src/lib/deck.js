@@ -296,6 +296,11 @@ export function applyBlockEdit(source, slideIndex, startLine, endLine, text) {
   })
 }
 
+/** Remplace tout le markdown d'une slide (l'éditeur en est la source). */
+export function applySlideRaw(source, slideIndex, text) {
+  return rebuild(source, slideIndex, () => String(text ?? '').split('\n'))
+}
+
 /** Insère un nouveau bloc juste après la ligne indiquée. */
 export function insertBlockAfter(source, slideIndex, afterLine, text) {
   return rebuild(source, slideIndex, (lines) => {

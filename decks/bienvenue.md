@@ -51,19 +51,20 @@ On ne bascule pas entre « présenter » et « éditer » : on change de granula
 
 ## Écrire sur place
 
-`i` ouvre le paragraphe sous le curseur. Il devient sa propre source, au même endroit.
+`i` écrit dans le texte **déjà mis en forme**. Aucune fenêtre ne s'ouvre.
 
 <!-- pause -->
 
 ```text
-  j  →  ## Un titre        i  →  ## Un ti|tre
-                                (source éditable)
+  j  →  ## Un titre          i  →  ## Un ti|tre
+  (rendu)                          (le markdown revient
+                                    sous le curseur)
 ```
 
 <!-- pause -->
 
 ::: ok
-`échap` le rend de nouveau. Aucune fenêtre ne s'ouvre, rien ne bouge autour.
+`échap` rend la ligne au rendu. Le reste de la slide n'a pas bougé.
 :::
 
 <!-- note: Moment de démonstration. Écrire une vraie phrase, pas un exemple. -->
@@ -79,6 +80,7 @@ On ne bascule pas entre « présenter » et « éditer » : on change de granula
 - `x`, `d`+mouvement, `c`+mouvement : supprimer, changer
 - `u` : annuler
 - `A`, `I`, `O` : fin de ligne, début de ligne, nouveau paragraphe
+- `échap` : revenir au curseur, sans quitter la scène
 
 <!-- pause -->
 

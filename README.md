@@ -32,20 +32,28 @@ Sur NixOS : `nix develop` (Node 22 fourni), puis les mêmes commandes.
 L'application démarre sur un deck de démonstration (`decks/bienvenue.md`) qui explique
 aussi le format. Glisse n'importe quel fichier `.md` sur la fenêtre pour le présenter.
 
-## Un seul curseur
+## Un seul mode
 
-Le deck est un texte, la scène en est le rendu. Le curseur vit dans le texte :
+Il n'y a pas d'écran de lecture et d'écran d'édition : **le texte à l'écran est le
+document**. Le curseur est dedans, et la mise en forme est déjà appliquée.
 
 - **`j` / `k`** descendent et remontent de **paragraphe** en paragraphe. Pour une
   présentation finie, un paragraphe = un pas : la navigation *est* le rythme des slides.
 - **`w` `b` `e` `h` `l` `0` `$`** affinent jusqu'au mot et au caractère, avec compteurs
   (`3w`, `2x`, `d2w`).
-- **`i` `a` `A` `I` `O`** ouvrent le paragraphe sous le curseur : il devient **sa propre
-  source**, au même endroit, à la même taille. Aucune fenêtre, aucun panneau.
-- **`échap`** valide et le rend de nouveau.
+- **`i` `a` `A` `I` `O`** écrivent directement dans ce texte mis en forme.
+- **`échap`** revient au curseur.
 
-Pendant la frappe, seul le paragraphe courant change d'apparence ; le reste de la slide
-ne bouge pas. C'est la contrainte du genre « je pense à voix haute ».
+Le markdown n'est pas un autre monde : la syntaxe (`##`, `**`, `-`, liens) est **masquée
+partout, et réapparaît sur la ligne du curseur**. On peut donc corriger un `**` sans
+quitter le rendu, et refermer la paire fait apparaître le gras immédiatement.
+
+Les blocs qui ne sont pas du texte enrichi (code, tableaux, diagrammes, encadrés) restent
+affichés en source stylisée : c'est le prix de l'exactitude, et le curseur peut y entrer
+comme ailleurs.
+
+Le contenu situé après un `<!-- pause -->` est **grisé** tant qu'on ne l'a pas atteint :
+il reste lisible et éditable, mais on voit où en est la révélation.
 
 `u` annule la dernière édition. `s` télécharge le deck à jour.
 
@@ -240,8 +248,11 @@ Deux principes tiennent l'ensemble :
   toutes les slides dépliées, une par page.
 - **Mermaid** est chargé à la demande (~1 Mo) et seulement s'il y a un diagramme.
 - **La fenêtre orateur** peut être bloquée par le bloqueur de pop-ups : autoriser le site.
-- **Édition = markdown brut** : le paragraphe édité montre sa source, pas son rendu.
-  C'est le prix de l'exactitude - et ce qui rend le geste lisible à l'écran.
+- **L'éditeur est CodeMirror 6** (~90 Ko gzip) : c'est ce qui rend la sélection, l'IME et
+  l'annulation fiables. Le rendu de la scène et celui du PDF ne passent pas par le même
+  moteur, donc une différence de détail reste possible entre les deux.
+- **Pas de rendu riche des blocs** (code, tableaux, diagrammes) : ils s'affichent en
+  source stylisée pendant l'édition.
 - **Pas de sélection visuelle** (`v`), pas de presse-papier interne (`y`/`p`).
 - **Pas de multi-écran synchronisé** au-delà des notes : une seule scène pilote.
 

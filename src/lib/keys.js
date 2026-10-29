@@ -32,15 +32,15 @@ export const KEYMAP = [
   {
     group: 'Éditer sur place',
     items: [
-      { keys: ['i'], label: 'insérer avant le curseur' },
-      { keys: ['a', 'A'], label: 'insérer après / en fin de ligne' },
-      { keys: ['I'], label: 'insérer en début de ligne' },
+      { keys: ['i'], label: 'écrire dans le texte (insertion)' },
+      { keys: ['a', 'A'], label: 'écrire après / en fin de ligne' },
+      { keys: ['I'], label: 'écrire en début de ligne' },
       { keys: ['O'], label: 'nouveau paragraphe après' },
       { keys: ['x'], label: 'supprimer le caractère' },
       { keys: ['d', 'w'], label: 'supprimer (d + mouvement)' },
       { keys: ['c', 'w'], label: 'changer (c + mouvement)' },
       { keys: ['u'], label: 'annuler' },
-      { keys: ['échap'], label: 'valider et revenir au rendu' },
+      { keys: ['échap'], label: 'revenir au curseur (mode normal)' },
     ],
   },
   {

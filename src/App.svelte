@@ -1,17 +1,14 @@
 <script>
-  import { onMount, tick } from 'svelte'
-  import {
-    parseDeck,
-    applyBlockEdit,
-    insertBlockAfter,
-    serialize,
-    slugify,
-    blockKind,
-  } from './lib/deck.js'
-  import { normalizeKey, isEditableTarget } from './lib/keys.js'
-  import { move, operatorRange, deleteRange, smartNewline, clamp } from './lib/motions.js'
+  import { onMount, tick, untrack } from 'svelte'
+  import { parseDeck, applySlideRaw, serialize, slugify, scanBlocks } from './lib/deck.js'
+  import { normalizeKey } from './lib/keys.js'
+  import { move, operatorRange, clamp } from './lib/motions.js'
+  import { lineStarts, lineAt } from './lib/livepreview.js'
+  import { setDocument, setReadOnly, setPending } from './lib/editor.js'
+  import { undo as editorUndo } from '@codemirror/commands'
   import { storage, download } from './lib/storage.js'
   import SlideView from './components/SlideView.svelte'
+  import SlideEditor from './components/SlideEditor.svelte'
   import Chrome from './components/Chrome.svelte'
   import CommandBar from './components/CommandBar.svelte'
   import HelpOverlay from './components/HelpOverlay.svelte'
@@ -28,14 +25,11 @@
   let deck = $derived(parseDeck(source))
 
   let slideIndex = $state(0)
-  let blockIndex = $state(0)
-  let caret = $state(0)
-  let editing = $state(false)
-  let insertMode = $state(false)
-  let draft = $state('')
-  let phantom = $state(null)
-
   let mode = $state('present')
+  let view = $state(null)
+  let docText = $state('')
+  let cursor = $state(0)
+
   let theme = $state(THEMES.includes(params.get('theme')) ? params.get('theme') : storage.theme())
   let typeScale = $state(clamp(Number(storage.scale()) || 1, 0.8, 1.6))
   let raw = $state(params.get('raw') === '1')
@@ -45,50 +39,37 @@
   let overviewCursor = $state(0)
   let printAll = $state(false)
   let stageEl = $state(null)
-  let textareaEl = $state(null)
   let fileInput = $state(null)
 
   let countBuf = ''
   let pendingOp = null
   let lastG = 0
-  let history = []
+  let writeTimer = null
+  let wantedLine = 0
+  let loadedKey = ''
+  let docVersion = $state(0)
+  let lastPending = -1
 
   let slide = $derived(deck.slides[slideIndex] ?? deck.slides[0] ?? null)
-  let blocks = $derived(slide?.blocks ?? [])
   let total = $derived(deck.slides.length || 1)
 
-  let block = $derived(blocks[Math.min(blockIndex, Math.max(0, blocks.length - 1))] ?? null)
-  let seg = $derived(block?.segIndex ?? 0)
-  let segmentCount = $derived(slide?.segmentCount ?? 1)
+  /* Les blocs viennent du document vivant, pas du source sauvegardé. */
+  let docBlocks = $derived(scanBlocks(docText).blocks)
+  let starts = $derived(lineStarts(docText))
+  let cursorLine = $derived(lineAt(starts, clamp(cursor, 0, docText.length)))
 
-  /**
-   * Blocs réellement affichés : jusqu'au segment courant, plus le
-   * paragraphe fantôme en cours de création (`O`).
-   */
-  let viewBlocks = $derived.by(() => {
-    if (!slide) return []
-    const list = blocks.filter((b) => b.segIndex <= seg)
-    if (!phantom) return list
-
-    const ghost = {
-      text: phantom.text,
-      kind: blockKind(phantom.text || ' '),
-      phantom: true,
-      segIndex: phantom.segIndex,
-      startLine: phantom.afterLine + 2,
-      endLine: phantom.afterLine + 2,
-    }
-    const position = list.filter((b) => b.startLine <= phantom.afterLine).length
-    list.splice(Math.min(position, list.length), 0, ghost)
-    return list
+  let blockIndex = $derived.by(() => {
+    let found = 0
+    docBlocks.forEach((block, i) => {
+      if (block.startLine <= cursorLine) found = i
+    })
+    return found
   })
 
-  let activeIndex = $derived(
-    phantom
-      ? viewBlocks.findIndex((b) => b.phantom)
-      : Math.min(blockIndex, Math.max(0, viewBlocks.length - 1))
+  let seg = $derived(docBlocks[blockIndex]?.segIndex ?? 0)
+  let segmentCount = $derived(
+    docBlocks.length ? Math.max(...docBlocks.map((b) => b.segIndex)) + 1 : 1
   )
-  let activeBlock = $derived(viewBlocks[activeIndex] ?? null)
 
   let progress = $derived(
     Math.min(100, ((slideIndex + (seg + 1) / Math.max(1, segmentCount)) / total) * 100)
@@ -121,12 +102,12 @@
     storage.saveSlide(slideIndex)
   })
 
+  let saveTimer = null
   $effect(() => {
     const value = source
     clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => storage.saveDeckSource(value), 300)
+    saveTimer = setTimeout(() => storage.saveDeckSource(value), 400)
   })
-  let saveTimer = null
 
   /* ---------- chrono ---------- */
 
@@ -206,7 +187,6 @@
   onMount(async () => {
     const wanted = params.has('slide') ? Number(params.get('slide')) - 1 : storage.slide()
     slideIndex = clamp(Number.isFinite(wanted) ? wanted : 0, 0, total - 1)
-    blockIndex = 0
     applyDeckTheme(deck.meta)
 
     if (params.get('deck')) {
@@ -214,6 +194,7 @@
         const response = await fetch(params.get('deck'))
         source = await response.text()
         slideIndex = 0
+        docVersion += 1
         applyDeckTheme(deck.meta)
         showToast('deck chargé depuis l’URL')
       } catch {
@@ -222,264 +203,274 @@
     }
 
     if (!params.has('onboard') && !storage.onboarded()) mode = 'onboard'
+    else setMode('present')
   })
 
-  /* ---------- curseur ---------- */
+  /* ---------- document ---------- */
 
-  function pushHistory() {
-    history.push(source)
-    if (history.length > 60) history.shift()
+  function text() {
+    return view?.state.doc.toString() ?? ''
   }
 
-  function undo() {
-    if (!history.length) {
-      showToast('rien à annuler')
+  function head() {
+    return view?.state.selection.main.head ?? 0
+  }
+
+  function place(position) {
+    if (!view) return
+    const target = clamp(position, 0, view.state.doc.length)
+    view.dispatch({ selection: { anchor: target }, scrollIntoView: true })
+    view.focus()
+  }
+
+  function lineOffset(line) {
+    const list = lineStarts(text())
+    return list[clamp(line, 0, list.length - 1)] ?? 0
+  }
+
+  function flushWrite() {
+    clearTimeout(writeTimer)
+    if (!view) return
+    const value = view.state.doc.toString()
+    if (value !== (slide?.raw ?? '') && loadedKey) {
+      source = applySlideRaw(source, slideIndex, value)
+      dockText(value)
+    }
+  }
+
+  function dockText(value) {
+    if (docText !== value) docText = value
+  }
+
+  function handleDocChange(value) {
+    dockText(value)
+    syncPending(head(), value)
+    clearTimeout(writeTimer)
+    writeTimer = setTimeout(() => {
+      source = applySlideRaw(source, slideIndex, value)
+    }, 300)
+  }
+
+  function handleCursor(position, value) {
+    cursor = position
+    dockText(value)
+    syncPending(position, value)
+  }
+
+  /**
+   * Grisage du contenu qui n'est pas encore "révélé" (blocs après le segment
+   * courant). Calculé depuis la position réelle du curseur, jamais depuis un
+   * état dérivé : sinon le grisé suit avec un pas de retard.
+   */
+  function syncPending(position, value) {
+    if (!view) return
+    const blocks = scanBlocks(value).blocks
+    const total = view.state.doc.length
+    if (!blocks.length) {
+      if (lastPending !== total) {
+        lastPending = total
+        setPending(view, total)
+      }
       return
     }
-    commitEdit()
-    source = history.pop()
-    blockIndex = clamp(blockIndex, 0, blocks.length - 1)
-    caret = clamp(caret, 0, block?.text.length ?? 0)
-    showToast('annulé')
-  }
-
-  function blockLineCount(b) {
-    return (b?.text.match(/\n/g)?.length ?? 0) + 1
-  }
-
-  async function focusCaret() {
-    await tick()
-    if (!textareaEl) return
-    textareaEl.focus({ preventScroll: true })
-    const position = clamp(caret, 0, textareaEl.value.length)
-    textareaEl.setSelectionRange(position, position)
-    scrollCursorIntoView()
-  }
-
-  async function scrollCursorIntoView() {
-    await tick()
-    const element = stageEl?.querySelector('.block.is-cursor')
-    element?.scrollIntoView({ block: 'center', behavior: 'auto' })
-  }
-
-  function startEditing(position = caret, insert = false) {
-    if (!activeBlock) {
-      newParagraph()
-      return
+    const starts = lineStarts(value)
+    const line = lineAt(starts, position)
+    let seg = 0
+    blocks.forEach((block) => {
+      if (block.startLine <= line) seg = block.segIndex
+    })
+    const next = blocks.find((block) => block.segIndex > seg)
+    const offset = next ? (starts[next.startLine] ?? total) : total
+    if (offset !== lastPending) {
+      lastPending = offset
+      setPending(view, offset)
     }
-    if (!editing) {
-      draft = activeBlock.text
-      editing = true
+  }
+
+  /* Chargement du document à chaque slide (ou rechargement externe). */
+  $effect(() => {
+    const currentView = view
+    const currentSlide = slide
+    void docVersion
+    if (!currentView || !currentSlide) return
+
+    const key = `${slideIndex}:${docVersion}`
+    if (loadedKey === key) return
+    loadedKey = key
+
+    untrack(() => {
+      setDocument(currentView, currentSlide.raw, {
+        readonly: mode !== 'insert',
+        onChange: handleDocChange,
+        onCursor: handleCursor,
+      })
+      const lines = lineStarts(currentSlide.raw).length
+      const line = clamp(wantedLine < 0 ? lines - 1 : wantedLine, 0, lines - 1)
+      wantedLine = 0
+      const offset = lineStarts(currentSlide.raw)[line] ?? 0
+      place(offset)
+      lastPending = -1
+      syncPending(offset, currentSlide.raw)
+    })
+  })
+
+  $effect(() => {
+    if (!view) return
+    setReadOnly(view, mode !== 'insert')
+    if (mode === 'insert') view.focus()
+  })
+
+  /* Le grisage est recalculé par syncPending, à chaque déplacement. */
+
+  /* ---------- modes ---------- */
+
+  function setMode(next) {
+    mode = next
+    if (view) {
+      setReadOnly(view, next !== 'insert')
+      view.focus()
     }
-    insertMode = insert
-    caret = clamp(position, 0, draft.length)
-    focusCaret()
-  }
-
-  /** Écrit `draft` dans le source. Ne touche à rien si rien n'a changé. */
-  function commitEdit() {
-    if (!editing) return
-    const target = activeBlock
-    const text = draft
-    editing = false
-    insertMode = false
-
-    if (target?.phantom) {
-      const anchor = phantom
-      phantom = null
-      const content = text.replace(/\s+$/, '')
-      if (!content.trim()) return
-      pushHistory()
-      source = insertBlockAfter(source, slideIndex, anchor.afterLine, content)
-      const line = anchor.afterLine + 2
-      const found = deck.slides[slideIndex].blocks.findIndex((b) => b.startLine === line)
-      if (found >= 0) blockIndex = found
-      return
-    }
-
-    if (!target || target.phantom) return
-    if (text === target.text) return
-
-    pushHistory()
-    const startLine = target.startLine
-    source = applyBlockEdit(source, slideIndex, target.startLine, target.endLine, text)
-    const next = deck.slides[slideIndex]?.blocks ?? []
-    const found = next.findIndex((b) => b.startLine === startLine)
-    blockIndex = found >= 0 ? found : clamp(blockIndex, 0, next.length - 1)
-    caret = clamp(caret, 0, next[blockIndex]?.text.length ?? 0)
-  }
-
-  function setDraft(nextText, nextCaret) {
-    if (!editing) {
-      draft = activeBlock?.text ?? ''
-      editing = true
-    }
-    draft = nextText
-    caret = clamp(nextCaret, 0, nextText.length)
-    focusCaret()
-  }
-
-  function currentText() {
-    return editing ? draft : (activeBlock?.text ?? '')
-  }
-
-  async function applyMotion(motion, count = 1) {
-    if (!activeBlock) return
-    if (!editing) {
-      draft = activeBlock.text
-      editing = true
-      insertMode = false
-    }
-    caret = move(draft, caret, motion, count)
-    await focusCaret()
-  }
-
-  function applyOperator(op, motion, count = 1) {
-    if (!activeBlock) return
-    const text = currentText()
-    const [from, to] = operatorRange(text, caret, motion, count)
-    const result = deleteRange(text, from, to)
-    setDraft(result.text, result.pos)
-    insertMode = op === 'c'
-  }
-
-  function deleteChar(count = 1) {
-    if (!activeBlock) return
-    const text = currentText()
-    const [from, to] = operatorRange(text, caret, 'l', count)
-    const result = deleteRange(text, from, to)
-    setDraft(result.text, result.pos)
-  }
-
-  function applySmartNewline() {
-    const result = smartNewline(draft, caret)
-    draft = result.text
-    caret = result.pos
-    focusCaret()
-  }
-
-  function newParagraph() {
-    commitEdit()
-    const anchor = activeBlock
-    const seed = anchor?.kind === 'list' ? '- ' : ''
-    phantom = {
-      segIndex: anchor?.segIndex ?? seg,
-      afterLine: anchor ? anchor.endLine : Math.max(0, (slide?.raw.split('\n').length ?? 1) - 1),
-      text: seed,
-    }
-    editing = true
-    insertMode = true
-    draft = seed
-    caret = seed.length
-    focusCaret()
   }
 
   /* ---------- navigation ---------- */
 
-  function scrollTop() {
-    if (stageEl) stageEl.scrollTop = 0
-  }
-
-  function globalBlocks() {
-    const list = []
-    deck.slides.forEach((s, si) => s.blocks.forEach((b, bi) => list.push({ si, bi })))
-    return list
-  }
-
-  function goToSlide(target) {
-    commitEdit()
-    slideIndex = clamp(target, 0, total - 1)
-    blockIndex = 0
-    caret = 0
-    phantom = null
-    scrollTop()
-  }
-
-  function goToGlobalBlock(position) {
-    const list = globalBlocks()
-    const found = list[clamp(position, 0, list.length - 1)]
-    if (!found) return
-    commitEdit()
-    slideIndex = found.si
-    blockIndex = found.bi
-    caret = 0
-    scrollTop()
+  function goToSlide(target, line = 0) {
+    flushWrite()
+    wantedLine = line
+    const next = clamp(target, 0, total - 1)
+    if (next === slideIndex) {
+      place(line < 0 ? view?.state.doc.length ?? 0 : lineOffset(line))
+      return
+    }
+    slideIndex = next
   }
 
   function nextBlock() {
-    commitEdit()
-    phantom = null
-    if (blockIndex < blocks.length - 1) {
-      blockIndex += 1
-      caret = 0
-      scrollCursorIntoView()
-    } else if (slideIndex < total - 1) {
-      goToSlide(slideIndex + 1)
+    const next = docBlocks[blockIndex + 1]
+    if (next) {
+      place(lineOffset(next.startLine))
+      return
     }
+    if (slideIndex < total - 1) goToSlide(slideIndex + 1, 0)
   }
 
   function prevBlock() {
-    commitEdit()
-    phantom = null
-    if (blockIndex > 0) {
-      blockIndex -= 1
-      caret = 0
-      scrollCursorIntoView()
-    } else if (slideIndex > 0) {
-      commitEdit()
-      slideIndex -= 1
-      const previous = deck.slides[slideIndex]
-      blockIndex = Math.max(0, (previous?.blocks.length ?? 1) - 1)
-      caret = 0
-      scrollCursorIntoView()
+    const previous = docBlocks[blockIndex - 1]
+    if (previous) {
+      place(lineOffset(previous.startLine))
+      return
     }
+    if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
   }
 
-  /** Le pas suit les segments (`<!-- pause -->`), le paragraphe est plus fin. */
   function nextStep() {
-    commitEdit()
-    phantom = null
-    const found = blocks.findIndex((b) => b.segIndex > seg)
-    if (found >= 0) {
-      blockIndex = found
-      caret = 0
-      scrollCursorIntoView()
-    } else if (slideIndex < total - 1) {
-      goToSlide(slideIndex + 1)
+    const next = docBlocks.find((b) => b.segIndex > seg)
+    if (next) {
+      place(lineOffset(next.startLine))
+      return
     }
+    if (slideIndex < total - 1) goToSlide(slideIndex + 1, 0)
   }
 
   function prevStep() {
-    commitEdit()
-    phantom = null
-    const currentSeg = seg
-    let previous = -1
-    blocks.forEach((b, i) => {
-      if (b.segIndex < currentSeg) previous = i
+    let previous = null
+    docBlocks.forEach((b) => {
+      if (b.segIndex < seg) previous = b
     })
-    if (previous >= 0) {
-      blockIndex = previous
-      caret = 0
-      scrollCursorIntoView()
-    } else if (slideIndex > 0) {
-      slideIndex -= 1
-      const previousSlide = deck.slides[slideIndex]
-      blockIndex = Math.max(0, (previousSlide?.blocks.length ?? 1) - 1)
-      caret = 0
-      scrollCursorIntoView()
+    if (previous) {
+      place(lineOffset(previous.startLine))
+      return
     }
+    if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
+  }
+
+  /* ---------- édition modale ---------- */
+
+  function applyMotion(key, count = 1) {
+    const motion = key === '↑' ? 'k' : key === '↓' ? 'j' : key
+    place(move(text(), head(), motion, count))
+  }
+
+  function applyOperator(op, key, count = 1) {
+    const value = text()
+    let from = 0
+    let to = 0
+
+    if (key === op) {
+      const block = docBlocks[blockIndex]
+      if (!block) return
+      from = lineOffset(block.startLine)
+      to = lineOffset(block.endLine) + (docText.split('\n')[block.endLine]?.length ?? 0)
+    } else {
+      ;[from, to] = operatorRange(value, head(), key, count)
+    }
+
+    if (to <= from) return
+    view.dispatch({ changes: { from, to, insert: '' }, selection: { anchor: from } })
+    place(from)
+    if (op === 'c') setMode('insert')
+  }
+
+  function deleteChar(count = 1) {
+    const selection = view.state.selection.main
+    if (!selection.empty) {
+      view.dispatch({ changes: { from: selection.from, to: selection.to, insert: '' } })
+      return
+    }
+    const [from, to] = operatorRange(text(), head(), 'l', count)
+    if (to > from) view.dispatch({ changes: { from, to, insert: '' } })
+  }
+
+  function newParagraph() {
+    const block = docBlocks[blockIndex]
+    const value = text()
+    const offset = block ? lineOffset(block.endLine) + (value.split('\n')[block.endLine]?.length ?? 0) : value.length
+    const insert = block?.kind === 'list' ? '\n\n- ' : '\n\n'
+    view.dispatch({
+      changes: { from: offset, insert },
+      selection: { anchor: offset + insert.length },
+    })
+    place(offset + insert.length)
+    setMode('insert')
+  }
+
+  function insertNewline() {
+    const value = text()
+    const position = head()
+    const lineStart = value.lastIndexOf('\n', Math.max(0, position - 1)) + 1
+    const line = value.slice(lineStart, position)
+    const bullet = line.match(/^\s*([-*+]|\d+\.)\s/)
+    const insert = bullet ? `\n${bullet[0]}` : '\n'
+    view.dispatch({
+      changes: { from: position, insert },
+      selection: { anchor: position + insert.length },
+      scrollIntoView: true,
+    })
+  }
+
+  function undo() {
+    if (!view) return
+    // `undo` refuse de tourner sur un document en lecture seule (mode normal) :
+    // on l'ouvre le temps de la transaction, sans laisser de fenêtre à la frappe.
+    const locked = view.state.readOnly
+    if (locked) setReadOnly(view, false)
+    const done = editorUndo(view)
+    if (locked && !view.state.readOnly) setReadOnly(view, true)
+    if (!done) showToast('rien à annuler')
+    view.focus()
   }
 
   /* ---------- fichiers ---------- */
 
   function saveDeck() {
+    flushWrite()
     const name = slugify(deck.meta.title) || 'ardoise'
     download(`${name}.md`, serialize(parseDeck(source)))
     showToast('deck exporté en markdown')
   }
 
   async function exportPdf() {
-    commitEdit()
+    flushWrite()
     printAll = true
     await tick()
     await new Promise((resolve) => setTimeout(resolve, 700))
@@ -487,20 +478,19 @@
     setTimeout(() => (printAll = false), 1200)
   }
 
-  async function adoptDeck(text, label) {
-    source = text
-    history = []
-    applyDeckTheme(deck.meta)
+  function adoptDeck(value, label) {
+    source = value
     slideIndex = 0
-    blockIndex = 0
-    caret = 0
-    phantom = null
+    docText = ''
+    cursor = 0
+    docVersion += 1
+    applyDeckTheme(deck.meta)
     if (label) showToast(label)
   }
 
   async function loadFile(file) {
     if (!file) return
-    await adoptDeck(await file.text(), `deck chargé : ${file.name}`)
+    adoptDeck(await file.text(), `deck chargé : ${file.name}`)
   }
 
   function openFilePicker() {
@@ -511,7 +501,7 @@
     try {
       const response = await fetch(url)
       if (!response.ok) throw new Error(String(response.status))
-      await adoptDeck(await response.text(), 'deck importé depuis l’URL')
+      adoptDeck(await response.text(), 'deck importé depuis l’URL')
     } catch {
       showToast('import impossible (URL ou CORS)')
     }
@@ -525,13 +515,7 @@
 
   function resetAll() {
     storage.clearDeckSource()
-    source = welcome
-    history = []
-    slideIndex = 0
-    blockIndex = 0
-    caret = 0
-    phantom = null
-    showToast('retour au deck de démonstration')
+    adoptDeck(welcome, 'retour au deck de démonstration')
   }
 
   async function toggleFullscreen() {
@@ -601,7 +585,7 @@
     { id: 'prev', key: 'prev', label: 'paragraphe précédent', run: prevBlock },
     { id: 'step', key: 'step', label: 'pas suivant (segment)', run: nextStep },
     { id: 'slide', key: 'slide 7', label: 'aller à la slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
-    { id: 'edit', key: 'edit', label: 'éditer le paragraphe', run: () => startEditing(caret, true) },
+    { id: 'edit', key: 'edit', label: 'écrire ici (mode insertion)', run: () => setMode('insert') },
     { id: 'new', key: 'new', label: 'nouveau paragraphe', run: newParagraph },
     { id: 'theme', key: 'theme nord', label: 'changer de thème', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'size', key: 'size 120', label: 'taille du texte (80–160 %)', run: (q) => {
@@ -631,6 +615,7 @@
     mode = 'present'
     if (command?.run) {
       command.run(query)
+      setMode('present')
       return
     }
     const trimmed = query.trim()
@@ -645,7 +630,7 @@
 
   function dismissOnboarding() {
     storage.setOnboarded(true)
-    mode = 'present'
+    setMode('present')
   }
 
   function gridColumns() {
@@ -661,22 +646,25 @@
     document.querySelector('.thumb.is-active')?.scrollIntoView({ block: 'nearest' })
   }
 
-  function listStart() {
-    const text = currentText()
-    const index = text.lastIndexOf('\n', Math.max(0, caret - 1))
+  function lineStart() {
+    const value = text()
+    const index = value.lastIndexOf('\n', Math.max(0, head() - 1))
     return index === -1 ? 0 : index + 1
   }
 
-  function listEnd() {
-    const text = currentText()
-    const index = text.indexOf('\n', caret)
-    return index === -1 ? text.length : index
+  function lineEnd() {
+    const value = text()
+    const index = value.indexOf('\n', head())
+    return index === -1 ? value.length : index
   }
 
-  function onBeforeInput(event) {
-    // En mode normal le textarea ne sert qu'à montrer le curseur :
-    // aucune frappe ne doit y entrer directement.
-    if (editing && !insertMode) event.preventDefault()
+  function insertText(value) {
+    if (!view) return
+    const position = head()
+    view.dispatch({
+      changes: { from: position, insert: value },
+      selection: { anchor: position + value.length },
+    })
   }
 
   function onKeydown(event) {
@@ -690,14 +678,14 @@
 
     if (mode === 'black') {
       event.preventDefault()
-      mode = 'present'
+      setMode('present')
       return
     }
 
     if (mode === 'help') {
       if (key === 'échap' || key === '?' || key === 'q') {
         event.preventDefault()
-        mode = 'present'
+        setMode('present')
       }
       return
     }
@@ -706,11 +694,11 @@
       const cols = gridColumns()
       if (key === 'échap' || key === 'o') {
         event.preventDefault()
-        mode = 'present'
+        setMode('present')
       } else if (key === 'entrée' || key === 'espace') {
         event.preventDefault()
         goToSlide(overviewCursor)
-        mode = 'present'
+        setMode('present')
       } else if (key === 'l' || key === 'j' || key === '→') {
         event.preventDefault()
         overviewMove(key === 'j' ? cols : 1)
@@ -724,31 +712,35 @@
     if (mode === 'command') {
       if (key === 'échap') {
         event.preventDefault()
-        mode = 'present'
+        setMode('present')
       }
       return
     }
 
-    if (insertMode) {
+    if (mode === 'insert') {
       if (key === 'échap') {
         event.preventDefault()
-        commitEdit()
+        event.stopPropagation()
+        setMode('present')
         return
       }
       if (key === 'entrée') {
         event.preventDefault()
-        applySmartNewline()
+        event.stopPropagation()
+        insertNewline()
         return
       }
       if (key === 'Tab') {
         event.preventDefault()
-        setDraft(`${draft.slice(0, caret)}  ${draft.slice(caret)}`, caret + 2)
+        event.stopPropagation()
+        insertText('  ')
         return
       }
-      return // frappe native, synchronisée par oninput
+      return // frappe libre : CodeMirror s'en occupe
     }
 
-    if (isEditableTarget(event.target) && event.target.tagName === 'INPUT') return
+    // Mode normal : nous possédons le clavier, CodeMirror ne voit rien.
+    event.stopPropagation()
 
     if (/^[0-9]$/.test(key)) {
       countBuf = (countBuf + key).slice(0, 3)
@@ -762,11 +754,7 @@
     if (pendingOp) {
       const op = pendingOp
       pendingOp = null
-      if (key === op) {
-        applyOperator(op, 'd', 1)
-        return
-      }
-      if (TEXT_KEYS.includes(key)) {
+      if (key === op || TEXT_KEYS.includes(key)) {
         applyOperator(op, key, count)
         return
       }
@@ -783,7 +771,7 @@
     switch (key) {
       case 'échap':
         event.preventDefault()
-        if (editing) commitEdit()
+        setMode('present')
         return
       case 'j':
         event.preventDefault()
@@ -805,15 +793,18 @@
         event.preventDefault()
         goToSlide(slideIndex - count)
         return
-      case 'G':
+      case 'G': {
         event.preventDefault()
-        goToGlobalBlock(hadCount ? count - 1 : globalBlocks().length - 1)
+        const last = docBlocks[docBlocks.length - 1]
+        if (hadCount) goToSlide(count - 1)
+        else if (last) place(lineOffset(last.startLine))
         return
+      }
       case 'g': {
         event.preventDefault()
         const now = Date.now()
         if (now - lastG < 620) {
-          goToGlobalBlock(0)
+          place(0)
           lastG = 0
         } else {
           lastG = now
@@ -838,19 +829,23 @@
         return
       case 'i':
         event.preventDefault()
-        startEditing(caret, true)
+        place(head())
+        setMode('insert')
         return
       case 'a':
         event.preventDefault()
-        startEditing(caret + 1, true)
+        place(head() + 1)
+        setMode('insert')
         return
       case 'I':
         event.preventDefault()
-        startEditing(listStart(), true)
+        place(lineStart())
+        setMode('insert')
         return
       case 'A':
         event.preventDefault()
-        startEditing(listEnd(), true)
+        place(lineEnd())
+        setMode('insert')
         return
       case 'O':
         event.preventDefault()
@@ -900,7 +895,6 @@
         bumpScale(-0.05)
         return
       default:
-        // En mode normal, aucune touche imprimable ne doit écrire.
         if (key.length === 1) event.preventDefault()
         return
     }
@@ -921,38 +915,16 @@
 />
 
 <svelte:window
-  onkeydown={onKeydown}
-  onbeforeinput={onBeforeInput}
+  onkeydowncapture={onKeydown}
   ondragover={(event) => event.preventDefault()}
   ondrop={onDrop}
 />
 
 <div class="progress-top" style="width: {progress}%"></div>
 
-<div class="stage" bind:this={stageEl} aria-live="polite">
-  <div
-    class="slide-scroll"
-    class:is-centered={slide?.layout === 'center'}
-    class:is-editing={editing}
-  >
-    {#if slide}
-      {#key slideIndex}
-        <SlideView
-          blocks={viewBlocks}
-          {activeIndex}
-          {editing}
-          value={draft}
-          bind:textarea={textareaEl}
-          oninput={(value, position) => {
-            draft = value
-            caret = position ?? draft.length
-          }}
-          oncaret={(position) => {
-            if (editing) caret = position
-          }}
-        />
-      {/key}
-    {/if}
+<div class="stage" bind:this={stageEl}>
+  <div class="slide-scroll" class:is-centered={slide?.layout === 'center'}>
+    <SlideEditor bind:view onChange={handleDocChange} onCursor={handleCursor} />
   </div>
 </div>
 
@@ -965,18 +937,18 @@
   steps={segmentCount}
   {elapsed}
   {running}
-  mode={insertMode ? 'insertion' : editing ? 'édition' : 'present'}
+  mode={mode === 'insert' ? 'insertion' : 'present'}
 />
 
 <CommandBar
   open={mode === 'command'}
   {commands}
   onrun={runCommand}
-  onclose={() => (mode = 'present')}
+  onclose={() => setMode('present')}
 />
 
 {#if mode === 'help'}
-  <HelpOverlay onclose={() => (mode = 'present')} />
+  <HelpOverlay onclose={() => setMode('present')} />
 {/if}
 
 {#if mode === 'overview'}
@@ -986,9 +958,9 @@
     currentIndex={slideIndex}
     onselect={(target) => {
       goToSlide(target)
-      mode = 'present'
+      setMode('present')
     }}
-    onclose={() => (mode = 'present')}
+    onclose={() => setMode('present')}
   />
 {/if}
 
@@ -1009,7 +981,7 @@
       </div>
       <div class="panel-body">
         <p style="margin:0 0 .4rem;color:var(--fg)">
-          Un seul curseur : tu présentes et tu édites dans la même scène.
+          Un seul mode : le texte est déjà à l’écran, le curseur est dedans.
         </p>
         <div class="onboard-list">
           <div class="onboard-row">
@@ -1018,15 +990,15 @@
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>espace</kbd></span>
-            <span>pas suivant (segment <code>&lt;!-- pause --&gt;</code>)</span>
+            <span>pas suivant : le texte en attente s’éclaire</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>i</kbd></span>
-            <span>éditer le paragraphe sur place, <kbd>échap</kbd> le rend de nouveau</span>
+            <span>écrire dans le texte mis en forme, <kbd>échap</kbd> revient au curseur</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>w</kbd> <kbd>b</kbd> <kbd>d</kbd><kbd>w</kbd></span>
-            <span>mot à mot, suppression - édition modale complète</span>
+            <span>mot à mot, suppression - le markdown réapparaît sous le curseur</span>
           </div>
           <div class="onboard-row">
             <span class="help-keys"><kbd>?</kbd> <kbd>:</kbd> <kbd>.</kbd></span>
