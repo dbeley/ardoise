@@ -6,7 +6,7 @@
  * vim keymap perform the edits.
  */
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state'
-import { EditorView, Decoration, drawSelection, keymap } from '@codemirror/view'
+import { EditorView, Decoration, WidgetType, drawSelection, keymap } from '@codemirror/view'
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands'
 import { buildDecorations } from './livepreview.js'
 
@@ -52,12 +52,48 @@ function decorations() {
     }
     for (const replace of replaces) {
       if (replace.to > replace.from) {
-        ranges.push(Decoration.replace({}).range(replace.from, replace.to))
+        const spec = replace.widget ? { widget: new ImageWidget(replace.widget) } : {}
+        ranges.push(Decoration.replace(spec).range(replace.from, replace.to))
       }
     }
 
     return Decoration.set(ranges, true)
   })
+}
+
+class ImageWidget extends WidgetType {
+  constructor(spec) {
+    super()
+    this.spec = spec
+  }
+
+  eq(other) {
+    return (
+      other.spec.src === this.spec.src &&
+      other.spec.alt === this.spec.alt &&
+      other.spec.width === this.spec.width
+    )
+  }
+
+  toDOM() {
+    const wrap = document.createElement('span')
+    wrap.className = 'cm-image'
+    const img = document.createElement('img')
+    img.src = this.spec.src
+    img.alt = this.spec.alt || ''
+    img.loading = 'lazy'
+    if (this.spec.width) img.style.width = `${this.spec.width}%`
+    img.onerror = () => {
+      wrap.classList.add('is-broken')
+      wrap.textContent = this.spec.alt || 'image unavailable'
+    }
+    wrap.appendChild(img)
+    return wrap
+  }
+
+  ignoreEvent() {
+    return true
+  }
 }
 
 export function createState(doc, { readonly = true, onChange, onCursor } = {}) {

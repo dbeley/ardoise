@@ -10,6 +10,8 @@
  * objects, and the tests can check the parsing without a browser.
  */
 
+import { parseImageLine } from './images.js'
+
 const FENCE = /^\s*(`{3,}|~{3,})/
 const HEADING = /^(#{1,6})\s+/
 const BULLET = /^(\s*)([-*+])\s+/
@@ -17,7 +19,6 @@ const ORDERED = /^(\s*)(\d+\.)\s+/
 const QUOTE = /^(\s*)>\s?/
 const BOX = /^\s*:::/
 const COMMENT = /^\s*<!--/
-
 export function lineStarts(text) {
   const starts = [0]
   for (let i = 0; i < text.length; i += 1) {
@@ -102,6 +103,15 @@ export function buildDecorations(text, selections = []) {
 
     if (BOX.test(line)) {
       lines.push({ line: index, className: 'cm-box-line' })
+      continue
+    }
+
+    const image = parseImageLine(line)
+    if (image) {
+      if (!isActive) {
+        replaces.push({ from: start, to: end, widget: { type: 'image', ...image } })
+      }
+      lines.push({ line: index, className: 'cm-image-line' })
       continue
     }
 

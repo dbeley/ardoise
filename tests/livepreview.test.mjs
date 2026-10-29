@@ -110,6 +110,26 @@ test('a horizontal rule is detected', () => {
   assert.equal(result.lines[0].className, 'cm-rule')
 })
 
+/* ---------------- images ---------------- */
+
+test('an image line becomes a widget away from the cursor', () => {
+  const text = '![A cat|60%](https://x/y.jpg)\n\ntext'
+  const idle = buildDecorations(text, [{ from: text.length, to: text.length }])
+  const widget = idle.replaces.find((replace) => replace.widget)
+  assert.deepEqual(widget.widget, {
+    type: 'image',
+    src: 'https://x/y.jpg',
+    alt: 'A cat',
+    width: 60,
+  })
+})
+
+test('the cursor line keeps the image markup', () => {
+  const text = '![A cat|60%](https://x/y.jpg)\n\ntext'
+  const active = buildDecorations(text, [{ from: 2, to: 2 }])
+  assert.equal(active.replaces.some((replace) => replace.widget), false)
+})
+
 /* ---------------- positions ---------------- */
 
 test('lines are located by offset', () => {

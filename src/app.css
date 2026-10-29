@@ -1121,6 +1121,17 @@ body.is-raw .cm-selectionLayer {
   color: var(--accent);
 }
 
+.cm-image img {
+  display: block;
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.cm-image.is-broken {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .cm-line.cm-ordered {
   padding-left: 0.2em;
 }
