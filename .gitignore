@@ -4,3 +4,5 @@ dist
 *.local
 .vite
 .direnv/
+test-results/
+playwright-report/

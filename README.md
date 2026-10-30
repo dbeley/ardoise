@@ -181,6 +181,14 @@ npm run dev        # http://localhost:5173
 npm run build      # static dist/
 npm run preview    # serves dist/
 npm test           # no browser: blocks, editing, motions, live preview
+npm run test:e2e   # browser: keyboard, search, paste, notes, cursor
+```
+
+The browser suite needs Chromium once: `npx playwright install chromium`. On NixOS the
+bundled browser may miss system libraries; point it at the local one instead:
+
+```bash
+PLAYWRIGHT_CHROMIUM_EXECUTABLE=$(command -v chromium) npm run test:e2e
 ```
 
 On NixOS: `nix develop` (Node 22 provided), then the same commands.
