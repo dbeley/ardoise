@@ -1,7 +1,7 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
   import { parseDeck, applySlideRaw, serialize, slugify, scanBlocks, cursorStart } from './lib/deck.js'
-  import { normalizeKey } from './lib/keys.js'
+  import { normalizeKey, isCountDigit } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
   import { setDocument, setReadOnly, setPending, setFind } from './lib/editor.js'
@@ -1028,7 +1028,7 @@
       return
     }
 
-    if (/^[0-9]$/.test(key)) {
+    if (isCountDigit(key, countBuf)) {
       countBuf = (countBuf + key).slice(0, 3)
       return
     }

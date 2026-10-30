@@ -77,6 +77,14 @@ export const KEY_ALIASES = {
   Escape: 'esc',
 }
 
+/**
+ * Digits feed the count buffer, except a lone `0`: that is the motion to the
+ * start of the line (`d0`, `10j`), as in Vim.
+ */
+export function isCountDigit(key, buffer = '') {
+  return /^[1-9]$/.test(key) || (key === '0' && buffer !== '')
+}
+
 export function normalizeKey(event) {
   if (event.key === ' ') return 'espace'
   if (event.key === 'Esc') return 'esc'
