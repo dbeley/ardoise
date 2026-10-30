@@ -113,9 +113,9 @@ export function move(text, pos, motion, count = 1) {
         i = prevWordStart(text, i)
         break
       case 'e':
-        // `wordEnd` returns the index of the word's last character; the caret
-        // is drawn before the character at its offset, so land just after it.
-        i = Math.min(text.length, wordEnd(text, i) + 1)
+        // Vim leaves the cursor *on* the last character of the word; the block
+        // cursor covers the character at its offset, so that is the index.
+        i = wordEnd(text, i)
         break
       case '0':
         i = lineStart(text, i)
@@ -138,16 +138,18 @@ export function move(text, pos, motion, count = 1) {
   return i
 }
 
-/**
- * Range [start, end) covered by an operator (d, c) followed by a motion.
+/** Range [start, end) covered by an operator (d, c) followed by a motion.
  * `dd`/`cc` (motion === 'd') renvoie tout le bloc.
  */
 export function operatorRange(text, pos, motion, count = 1) {
   const start = clamp(pos, 0, text.length)
+  // The arrows are line motions inside a block, like j/k;
+  // `d↓`, `y↓`, `d↑` must work too.
+  const key = motion === '↑' ? 'k' : motion === '↓' ? 'j' : motion
 
-  if (motion === 'd') return [0, text.length]
+  if (key === 'd') return [0, text.length]
 
-  switch (motion) {
+  switch (key) {
     case 'w': {
       let end = start
       for (let n = 0; n < Math.max(1, count); n += 1) end = nextWordStart(text, end)

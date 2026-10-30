@@ -45,18 +45,29 @@ export function parseFrontmatter(source) {
   return { meta, body }
 }
 
-/** Split the body into slides on lone `---` lines (outside code blocks). */
+/** Split the body into slides on lone `---` lines (outside code blocks and comments). */
 export function splitSlides(body) {
   const slides = []
   let buffer = []
   let fenceChar = null
+  let inComment = false
 
   for (const line of body.split('\n')) {
+    if (inComment) {
+      buffer.push(line)
+      if (line.includes('-->')) inComment = false
+      continue
+    }
     const opening = line.match(/^\s*(`{3,}|~{3,})/)
     if (opening) {
       if (!fenceChar) fenceChar = opening[1][0]
       else if (new RegExp(`^\\s*${fenceChar}{3,}\\s*$`).test(line)) fenceChar = null
       buffer.push(line)
+      continue
+    }
+    if (!fenceChar && /^\s*<!--/.test(line)) {
+      buffer.push(line)
+      if (!line.includes('-->')) inComment = true
       continue
     }
     if (!fenceChar && /^\s*---\s*$/.test(line)) {
@@ -100,6 +111,7 @@ export function scanBlocks(raw) {
   let current = null
   let fenceChar = null
   let inBox = false
+  let inComment = false
 
   const push = () => {
     if (!current) return
@@ -119,6 +131,11 @@ export function scanBlocks(raw) {
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i]
+
+    if (inComment) {
+      if (line.includes('-->')) inComment = false
+      continue
+    }
 
     if (fenceChar) {
       current.lines.push(line)
@@ -162,6 +179,7 @@ export function scanBlocks(raw) {
 
     if (/^\s*<!--/.test(line)) {
       push()
+      if (!line.includes('-->')) inComment = true
       continue
     }
 
@@ -177,6 +195,21 @@ export function scanBlocks(raw) {
   push()
 
   return { blocks, segmentCount: blocks.length ? Math.max(...blocks.map((b) => b.segIndex)) + 1 : 1 }
+}
+
+/**
+ * Line range covered by `count` blocks starting at `index`, inclusive.
+ * Used by `dd`/`yy` so a count spans consecutive paragraphs.
+ */
+export function blockLineRange(blocks, index, count = 1) {
+  if (!blocks.length) return null
+  const from = clampIndex(index, blocks.length)
+  const to = clampIndex(from + Math.max(1, count) - 1, blocks.length)
+  return { startLine: blocks[from].startLine, endLine: blocks[to].endLine }
+}
+
+function clampIndex(value, length) {
+  return Math.max(0, Math.min(Math.max(0, Number(value) || 0), length - 1))
 }
 
 /**

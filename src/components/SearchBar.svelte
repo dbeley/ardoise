@@ -5,6 +5,7 @@
 
   let query = $state('')
   let input = $state(null)
+  let bar = $state(null)
 
   let matches = $derived(findMatches(slides, query))
 
@@ -15,6 +16,17 @@
       input?.focus()
       input?.select?.()
     })
+  })
+
+  // A click on the stage would blur the input and leave the mode open: close
+  // the search instead, as a palette does.
+  $effect(() => {
+    if (!open) return
+    const onPointerDown = (event) => {
+      if (!bar?.contains(event.target)) onclose?.()
+    }
+    window.addEventListener('pointerdown', onPointerDown, true)
+    return () => window.removeEventListener('pointerdown', onPointerDown, true)
   })
 
   function onkeydown(event) {
@@ -35,7 +47,7 @@
 </script>
 
 {#if open}
-  <div class="command command--search" role="dialog" aria-label="Search the deck">
+  <div class="command command--search" role="dialog" aria-label="Search the deck" bind:this={bar}>
     <form
       class="command-form"
       onsubmit={(event) => {

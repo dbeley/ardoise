@@ -109,6 +109,14 @@ test('a comment is flagged as such', () => {
   const result = buildDecorations(text, [{ from: 0, to: 0 }])
   assert.equal(result.lines[0].className, 'cm-comment')
 })
+test('every line of a multi-line comment stays a comment', () => {
+  const text = '<!-- note: first\n---\nsecond -->\n\ntext'
+  const result = buildDecorations(text, [{ from: text.length, to: text.length }])
+  const comments = result.lines.filter((l) => l.className === 'cm-comment')
+  assert.equal(comments.length, 3)
+  assert.equal(result.marks.length, 0)
+  assert.equal(result.replaces.length, 0)
+})
 test('a callout keeps its fence lines', () => {
   const result = buildDecorations('::: key\nsome text\n:::', [{ from: 0, to: 0 }])
   assert.equal(result.lines.filter((l) => l.className === 'cm-box-line').length, 2)

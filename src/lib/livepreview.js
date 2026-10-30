@@ -72,12 +72,20 @@ export function buildDecorations(text, selections = []) {
   const replaces = []
 
   let fence = null
+  let comment = false
 
   for (let index = 0; index < starts.length; index += 1) {
     const start = starts[index]
     const end = index + 1 < starts.length ? starts[index + 1] - 1 : text.length
     const line = text.slice(start, end)
     const isActive = active.has(index)
+
+    // Multi-line comments stay styled as comments, never parsed as markdown.
+    if (comment) {
+      lines.push({ line: index, className: 'cm-comment' })
+      if (line.includes('-->')) comment = false
+      continue
+    }
 
     // Code blocks: never decorate the inside, only style the line.
     const fenceMatch = line.match(FENCE)
@@ -98,6 +106,7 @@ export function buildDecorations(text, selections = []) {
 
     if (COMMENT.test(line)) {
       lines.push({ line: index, className: 'cm-comment' })
+      if (!line.includes('-->')) comment = true
       continue
     }
 

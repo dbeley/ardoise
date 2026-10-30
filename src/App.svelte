@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
-  import { parseDeck, applySlideRaw, serialize, slugify, scanBlocks, cursorStart } from './lib/deck.js'
+  import { parseDeck, applySlideRaw, slugify, scanBlocks, cursorStart, blockLineRange } from './lib/deck.js'
   import { normalizeKey, isCountDigit } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
@@ -10,6 +10,7 @@
   import { imageMarkdown, imageInsertion } from './lib/images.js'
   import { codeInsertion } from './lib/code.js'
   import { linkMarkdown, linkInsertion } from './lib/links.js'
+  import { normalizeUrl } from './lib/urls.js'
   import {
     pushRegister,
     pickRegister,
@@ -58,6 +59,7 @@
 
   let countBuf = ''
   let pendingOp = null
+  let pendingCount = 1
   let replaceArmed = 0
   let registers = $state([])
   let registerIndex = 1
@@ -213,6 +215,7 @@
     if (params.get('deck')) {
       try {
         const response = await fetch(params.get('deck'))
+        if (!response.ok) throw new Error(String(response.status))
         source = await response.text()
         slideIndex = 0
         docVersion += 1
@@ -350,6 +353,7 @@
     mode = next
     if (next !== 'insert') {
       pendingOp = null
+      pendingCount = 1
       replaceArmed = 0
       registerArmed = false
       countBuf = ''
@@ -540,10 +544,12 @@
     const linewise = key === op
 
     if (linewise) {
-      const block = docBlocks[blockIndex]
-      if (!block) return
-      from = lineOffset(block.startLine)
-      to = blockEnd()
+      const range = blockLineRange(docBlocks, blockIndex, count)
+      if (!range) return
+      // `2dd` / `2yy`: the range spans that many blocks, blank lines included.
+      const lines = value.split('\n')
+      from = lineOffset(range.startLine)
+      to = lineOffset(range.endLine) + (lines[range.endLine]?.length ?? 0)
     } else {
       ;[from, to] = operatorRange(value, head(), key, count)
     }
@@ -634,7 +640,9 @@
   function saveDeck() {
     flushWrite()
     const name = slugify(deck.meta.title) || 'ardoise'
-    download(`${name}.md`, serialize(parseDeck(source)))
+    // Export the source verbatim: re-serialising would drop unknown frontmatter
+    // keys (subtitle, event, date…) and rewrite the separators.
+    download(`${name}.md`, source)
     showToast('deck exported as markdown')
   }
 
@@ -670,8 +678,13 @@
   }
 
   async function importFromUrl(url) {
+    const target = normalizeUrl(url)
+    if (!target) {
+      showToast('import failed (URL or CORS)')
+      return
+    }
     try {
-      const response = await fetch(url)
+      const response = await fetch(target)
       if (!response.ok) throw new Error(String(response.status))
       adoptDeck(await response.text(), 'deck imported from URL')
     } catch {
@@ -966,8 +979,16 @@
       return
     }
 
-    // The search input owns every key while it is open.
-    if (mode === 'search') return
+    // The search input owns the typing; esc must close it even after a click
+    // moved the focus to the stage.
+    if (mode === 'search') {
+      if (key === 'esc') {
+        event.preventDefault()
+        event.stopPropagation()
+        setMode('present')
+      }
+      return
+    }
 
     if (mode === 'image' || mode === 'link') return
 
@@ -1037,14 +1058,21 @@
     const count = hadCount ? Number(countBuf) : 1
     countBuf = ''
 
+    // `"3` applies to the next paste only, like Vim's register prefix.
+    if (key !== 'p' && key !== 'P') registerIndex = 1
+
     if (pendingOp) {
       const op = pendingOp
+      // `2dd` carries its count from before the operator; `d2w` carries it on
+      // the motion. The motion wins when both are given.
+      const times = hadCount ? count : pendingCount
       pendingOp = null
+      pendingCount = 1
       if (key === op || TEXT_KEYS.includes(key)) {
         // `c` switches to insert mode during this same keydown: without this,
         // the browser's default action types the motion key (cw -> "w").
         event.preventDefault()
-        applyOperator(op, key, count)
+        applyOperator(op, key, times)
         return
       }
       showToast('motion not recognised')
@@ -1120,6 +1148,7 @@
       case 'y':
         event.preventDefault()
         pendingOp = 'y'
+        pendingCount = count
         return
       case 'p':
         event.preventDefault()
@@ -1148,10 +1177,12 @@
       case 'd':
         event.preventDefault()
         pendingOp = 'd'
+        pendingCount = count
         return
       case 'c':
         event.preventDefault()
         pendingOp = 'c'
+        pendingCount = count
         return
       case 'u':
         event.preventDefault()

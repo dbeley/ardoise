@@ -115,13 +115,22 @@ const cursorFont = ViewPlugin.fromClass(
     }
 
     sync(view) {
+      // The constructor can run before the first document view exists, and
+      // `domAtPos` only knows positions that are currently drawn: never let a
+      // cosmetic plugin throw (CodeMirror would disable it for good).
+      if (!view.docView) return
       const layer = view.dom.querySelector('.cm-cursorLayer')
       if (!layer) return
-      const pos = view.state.selection.main.head
-      let node = view.domAtPos(pos).node
-      if (node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement
-      const line = node?.closest?.('.cm-line')
-      layer.style.fontSize = line ? getComputedStyle(line).fontSize : ''
+      try {
+        const pos = view.state.selection.main.head
+        if (!view.visibleRanges.some((range) => pos >= range.from && pos <= range.to)) return
+        let node = view.domAtPos(pos).node
+        if (node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement
+        const line = node?.closest?.('.cm-line')
+        layer.style.fontSize = line ? getComputedStyle(line).fontSize : ''
+      } catch {
+        // Mid-reconfiguration: the next selection or viewport update retries.
+      }
     }
   }
 )

@@ -12,6 +12,7 @@ import {
   insertBlockAfter,
   serialize,
   cursorStart,
+  blockLineRange,
 } from '../src/lib/deck.js'
 import {
   nextWordStart,
@@ -195,10 +196,17 @@ test('e reaches the end of the word', () => {
   assert.equal(wordEnd(text, 12), 16)
 })
 
-test('the e motion leaves the caret after the word', () => {
-  assert.equal(move(text, 0, 'e'), 5)
-  assert.equal(move(text, 5, 'e'), 11)
-  assert.equal(move(text, 11, 'e'), text.length)
+test('the e motion lands on the last character of the word', () => {
+  assert.equal(move(text, 0, 'e'), 4)
+  assert.equal(move(text, 4, 'e'), 10)
+  assert.equal(move(text, 10, 'e'), 16)
+  assert.equal(move(text, 16, 'e'), 16)
+})
+
+test('the arrows are line motions for operators too', () => {
+  const multi = 'abc\ndefgh\nij'
+  assert.deepEqual(operatorRange(multi, 1, '↓'), [1, 9])
+  assert.deepEqual(operatorRange(multi, 5, '↑'), [0, 5])
 })
 
 test('h and l move one character, without leaving', () => {
@@ -296,6 +304,38 @@ test('tab is ignored outside a list', () => {
 test('enter keeps a nested bullet at its indent', () => {
   const result = smartNewline('  - child', 9)
   assert.equal(result.text, '  - child\n  - ')
+})
+
+/* ---------------- multi-line comments ---------------- */
+test('a multi-line comment stays out of the blocks', () => {
+  const raw = '# Title\n\n<!-- note: first\nsecond line -->\n\nbody'
+  const { blocks } = scanBlocks(raw)
+  assert.deepEqual(blocks.map((b) => b.text), ['# Title', 'body'])
+})
+
+test('a horizontal rule inside a comment does not split the deck', () => {
+  const raw = '# Title\n\n<!-- note: first\n---\nsecond -->\n\nbody'
+  const parsed = parseDeck(raw)
+  assert.equal(parsed.slides.length, 1)
+  assert.deepEqual(parsed.slides[0].blocks.map((b) => b.text), ['# Title', 'body'])
+})
+
+test('a multi-line note is still given to the speaker', () => {
+  const raw = '# Title\n\n<!-- note: first\nsecond line -->\n\nbody'
+  assert.equal(parseDeck(raw).slides[0].note, 'first\nsecond line')
+})
+
+test('a fence inside a comment is not a code block', () => {
+  const raw = '<!-- note: first\n```nix\na\n```\n-->\n\ntext'
+  assert.deepEqual(scanBlocks(raw).blocks.map((b) => b.text), ['text'])
+})
+
+test('a block range can span a count of paragraphs', () => {
+  const { blocks } = scanBlocks('one\n\ntwo\n\nthree')
+  assert.deepEqual(blockLineRange(blocks, 0, 1), { startLine: 0, endLine: 0 })
+  assert.deepEqual(blockLineRange(blocks, 0, 2), { startLine: 0, endLine: 2 })
+  assert.deepEqual(blockLineRange(blocks, 1, 5), { startLine: 2, endLine: 4 })
+  assert.equal(blockLineRange([], 0, 1), null)
 })
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)
