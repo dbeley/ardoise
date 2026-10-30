@@ -49,8 +49,6 @@
   let theme = $state(THEMES.includes(params.get('theme')) ? params.get('theme') : storage.theme())
   let typeScale = $state(clamp(Number(storage.scale()) || 1, 0.8, 1.6))
   let raw = $state(params.get('raw') === '1')
-  let elapsed = $state(0)
-  let running = $state(false)
   let toastMsg = $state('')
   let overviewCursor = $state(0)
   let printAll = $state(false)
@@ -132,35 +130,6 @@
     saveTimer = setTimeout(() => storage.saveDeckSource(value), 400)
   })
 
-  /* ---------- timer ---------- */
-
-  let startedAt = 0
-  let base = 0
-
-  $effect(() => {
-    if (!running) return
-    const id = setInterval(() => {
-      elapsed = base + (Date.now() - startedAt)
-    }, 200)
-    return () => clearInterval(id)
-  })
-
-  function toggleTimer() {
-    base = elapsed
-    if (running) {
-      running = false
-    } else {
-      startedAt = Date.now()
-      running = true
-    }
-  }
-
-  function resetTimer() {
-    elapsed = 0
-    base = 0
-    startedAt = Date.now()
-  }
-
   /* ---------- speaker window ---------- */
 
   let channel = null
@@ -181,8 +150,6 @@
       title: slide?.title ?? '',
       next: deck.slides[slideIndex + 1]?.title ?? '',
       note: slide?.note ?? '',
-      elapsed,
-      running,
       deckTitle: deck.meta.title,
     })
   }
@@ -192,8 +159,6 @@
     void seg
     void segmentCount
     void total
-    void elapsed
-    void running
     void deck
     postState()
   })
@@ -852,8 +817,6 @@
       } },
     { id: 'overview', key: 'overview', label: 'overview', run: () => { overviewCursor = slideIndex; mode = 'overview' } },
     { id: 'presenter', key: 'presenter', label: 'speaker window', run: openPresenter },
-    { id: 'timer', key: 'timer', label: 'timer start / stop', run: toggleTimer },
-    { id: 'timer-reset', key: 'timer reset', label: 'reset the timer', run: resetTimer },
     { id: 'open', key: 'open', label: 'import a markdown file', run: (q) => {
         const argument = q.split(/\s+/)[1]
         if (argument) importFromUrl(argument)
@@ -1229,10 +1192,6 @@
         event.preventDefault()
         mode = 'command'
         return
-      case 't':
-        event.preventDefault()
-        toggleTimer()
-        return
       case 'f':
         event.preventDefault()
         toggleFullscreen()
@@ -1290,8 +1249,6 @@
   total={total}
   step={seg}
   steps={segmentCount}
-  {elapsed}
-  {running}
   mode={mode}
 />
 

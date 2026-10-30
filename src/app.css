@@ -567,10 +567,6 @@ body {
   color: var(--line);
 }
 
-.chrome-timer.is-running {
-  color: var(--accent);
-}
-
 .chrome-mode {
   color: var(--accent);
 }

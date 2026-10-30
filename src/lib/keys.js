@@ -53,7 +53,6 @@ export const KEYMAP = [
     items: [
       { keys: ['.'], label: 'black screen' },
       { keys: ['o'], label: 'overview' },
-      { keys: ['t'], label: 'timer start / stop' },
       { keys: ['f'], label: 'fullscreen' },
       { keys: ['M'], label: 'speaker window' },
       { keys: ['s'], label: 'download the deck' },

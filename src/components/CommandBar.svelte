@@ -70,7 +70,7 @@
         type="text"
         spellcheck="false"
         autocomplete="off"
-        placeholder="slide, theme, edit, timer, export…"
+        placeholder="slide, theme, edit, export…"
         aria-label="Command"
         onkeydown={onkeydown}
       />

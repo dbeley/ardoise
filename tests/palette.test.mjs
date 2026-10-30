@@ -24,7 +24,6 @@ const commands = [
   { id: 'new', key: 'new', label: 'blank deck' },
   { id: 'paragraph', key: 'paragraph', label: 'new paragraph' },
   { id: 'theme', key: 'theme nord', label: 'change theme' },
-  { id: 'timer-reset', key: 'timer reset', label: 'reset the timer' },
   { id: 'reset', key: 'reset', label: 'start over from a blank deck' },
   { id: 'tutor', key: 'tutor', label: 'open the tutorial' },
 ]

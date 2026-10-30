@@ -24,11 +24,6 @@
 
   let live = $derived(lastSeen > 0 && now - lastSeen < 4000)
 
-  function clock(ms) {
-    const total = Math.floor((ms ?? 0) / 1000)
-    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
-  }
-
   let time = $derived(
     new Date(now).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   )
@@ -66,13 +61,6 @@
         {#if payload?.steps > 1}
           <p class="presenter-small">step {payload.step + 1} / {payload.steps}</p>
         {/if}
-      </div>
-
-      <div class="presenter-card">
-        <h3>timer</h3>
-        <p class="presenter-big" class:is-running={payload?.running}>
-          {clock(payload?.elapsed)}
-        </p>
       </div>
 
       <div class="presenter-card">
@@ -168,7 +156,7 @@
   .presenter-side {
     padding: 1.4rem 1.6rem;
     display: grid;
-    grid-template-rows: repeat(4, auto);
+    grid-template-rows: repeat(3, auto);
     gap: 0.9rem;
     overflow: auto;
   }
@@ -187,10 +175,6 @@
     font-variant-numeric: tabular-nums;
     color: #e6e9ef;
     line-height: 1.1;
-  }
-
-  .presenter-big.is-running {
-    color: #7aa2f7;
   }
 
   .presenter-small {

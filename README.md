@@ -54,7 +54,6 @@ styled source: the cursor enters them like any other block.
 | `esc` | back to normal mode |
 | `.` | black screen |
 | `o` | overview |
-| `t` | timer start / stop |
 | `f` | fullscreen |
 | `M` | speaker window |
 | `s` | download the deck |
@@ -132,7 +131,7 @@ The ring keeps the last nine entries: `p` uses the most recent, `"3p` the third.
 ## Speaker notes
 
 `M` opens a second window for the other screen: the current notes in large type, the
-position, the step count, the timer, and the title of the next slide. It stays in sync
+position, the step count, and the title of the next slide. It stays in sync
 through `BroadcastChannel`; no server, no account.
 
 ## Files, commands, settings

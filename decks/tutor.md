@@ -188,7 +188,6 @@ Both can change mid-take: nothing reloads, nothing flashes.
 - `?raw=1` hides the stage footer **and the paragraph marker**
 - `f` goes fullscreen
 - `M` opens the notes on your second screen
-- `t` starts the timer
 - `s` downloads the current markdown
 
 <!-- pause -->
