@@ -10,6 +10,8 @@
     { code: '::: key … :::', label: 'callout (key, warn, ok, note, quote)' },
     { code: '```mermaid', label: 'diagram rendered on output' },
     { code: ':meta', label: 'edit the frontmatter (title, author, theme)' },
+    { code: ':table 3x4', label: 'insert a table (columns x rows)' },
+    { code: '![caption|60%](url)', label: 'image, its caption shown under it' },
     { code: '---', label: 'slide separator' },
   ]
 </script>

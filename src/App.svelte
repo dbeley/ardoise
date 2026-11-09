@@ -9,6 +9,7 @@
   import { storage, download } from './lib/storage.js'
   import { imageMarkdown, imageInsertion } from './lib/images.js'
   import { codeInsertion } from './lib/code.js'
+  import { tableInsertion, parseTableSize } from './lib/tables.js'
   import { linkMarkdown, linkInsertion } from './lib/links.js'
   import { normalizeUrl } from './lib/urls.js'
   import {
@@ -861,6 +862,20 @@
     setMode('insert')
   }
 
+  /** `:table [3x4]`: an empty table after the current block, cursor in the header. */
+  function insertTable(argument) {
+    if (!view) return
+    const value = text()
+    const { at, insert, pos } = tableInsertion(value, blockEnd(), parseTableSize(argument))
+    view.dispatch({
+      changes: { from: at, insert },
+      selection: { anchor: pos },
+      scrollIntoView: true,
+    })
+    place(pos)
+    setMode('insert')
+  }
+
   function insertImage({ alt, src, width }) {
     if (!view) return
     const markup = imageMarkdown({ alt, src, width })
@@ -951,6 +966,7 @@
     { id: 'image', key: 'image', label: 'insert an image from a URL', run: openImage },
     { id: 'code', key: 'code nix', label: 'insert a code block', run: (q) => insertCode(q.split(/\s+/)[1]) },
     { id: 'link', key: 'link', label: 'insert a link (URL + text)', run: openLink },
+    { id: 'table', key: 'table 3x4', label: 'insert a table (cols x rows)', run: (q) => insertTable(q.split(/\s+/)[1]) },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'meta', key: 'meta', label: 'edit title, author, theme (frontmatter)', run: openMeta },
     { id: 'size', key: 'size 120', label: 'text size (80-200%)', run: (q) => {

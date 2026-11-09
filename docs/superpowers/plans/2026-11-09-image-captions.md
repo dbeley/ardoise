@@ -201,8 +201,9 @@ test('the size is cols x rows, clamped', () => {
 test('the table lands after the block, never glued to it', () => {
   const { at, insert, pos } = tableInsertion('one\n\ntwo', 8)
   assert.equal(at, 8)
-  assert.equal(insert, '\n|  |  |\n|---|---|\n|  |  |\n')
-  assert.equal('one\n\ntwo'.slice(0, at) + insert.slice(0, pos - at) + 'X', 'one\n\ntwo\n|  |  |X')
+  assert.equal(insert, '\n\n|  |  |\n|---|---|\n|  |  |\n')
+  // The cursor sits in the first header cell, not after the row.
+  assert.equal(insert.slice(0, pos - at), '\n\n| ')
 })
 ```
 

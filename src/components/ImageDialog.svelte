@@ -76,8 +76,8 @@
           type="text"
           spellcheck="false"
           autocomplete="off"
-          placeholder="description (optional, for accessibility)"
-          aria-label="Image description"
+          placeholder="caption (optional, shown under the image)"
+          aria-label="Image caption"
         />
 
         <div class="image-preview">

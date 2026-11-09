@@ -100,10 +100,12 @@ theme: ardoise
 | `::: key` ... `:::` | callout (`key`, `warn`, `ok`, `note`, `quote`) |
 | ```` ```mermaid ```` | diagram |
 | ```` ```nix ```` | syntax highlighting (js, ts, bash, nix, rust, python, json, yaml, css, html, go, c, diff, toml) |
+| `\| a \| b \|` + `\|---\|` | table: a header row, a delimiter row, then the data rows |
 
 HTML comments stay in the markdown but never reach the rendered output (overview,
 print, speaker notes). A slide is split into **blocks** (headings, paragraphs, lists,
-code, callouts, tables). The line is the unit of movement and of `dd`/`yy`/`cc`: `j`
+code, callouts, tables). A table wider than the slide scrolls sideways instead of
+overflowing. The line is the unit of movement and of `dd`/`yy`/`cc`: `j`
 walks every content line of a slide, a code block or a list item included. The block is
 the unit of pacing (`space`): `}`/`{` skip a whole block, `d}` deletes to its end.
 
@@ -116,8 +118,14 @@ the unit of pacing (`space`): `}`/`{` skip a whole block, `d}` deletes to its en
 ```
 
 `|60%` is optional (1-100, default 100) and can be edited by hand. The dialog previews
-the image at the chosen width; the description field is optional (accessibility and the
-broken-image fallback). The image is loaded from its host each time the slide is shown.
+the image at the chosen width. The image is loaded from its host each time the slide is
+shown.
+
+The description is the image's **caption**. An image alone in its paragraph becomes a
+figure: the caption sits under the image, small and muted, inside the image's width — so
+it reads as that image's caption, not as the next paragraph. An image with no
+description shows no caption. It also serves as the `alt` (accessibility, and the text
+shown when the image does not load).
 
 `:link` asks for a URL and a text (defaults to the URL) and inserts `[text](url)` at the
 cursor.
@@ -155,6 +163,7 @@ through `BroadcastChannel`; no server, no account.
 | `:delete slide` | delete the current slide (same as `D`, asks first) |
 | `:image` | insert an image from a URL |
 | `:code` / `:code nix` | insert an empty code block (language optional) |
+| `:table` / `:table 3x4` | insert an empty table (columns x rows, default 2x1) |
 | `:link` | insert a link (URL + text) |
 | `s` | download the deck as markdown (`:w` works too) |
 | `:export` | PDF through the browser print dialog |
