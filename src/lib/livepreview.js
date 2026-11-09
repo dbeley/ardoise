@@ -19,6 +19,15 @@ const ORDERED = /^(\s*)(\d+\.)\s+/
 const QUOTE = /^(\s*)>\s?/
 const BOX = /^\s*:::/
 const COMMENT = /^\s*<!--/
+
+/** `|---|`, `| :-- | --: |`: the line that makes a run of pipes a table. */
+export function isDelimiterRow(line) {
+  const cells = String(line ?? '')
+    .split('|')
+    .map((cell) => cell.trim())
+    .filter(Boolean)
+  return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell))
+}
 export function lineStarts(text) {
   const starts = [0]
   for (let i = 0; i < text.length; i += 1) {
@@ -124,6 +133,37 @@ export function buildDecorations(text, selections = []) {
       continue
     }
 
+    // A table is one block: away from the cursor the whole run is drawn as a
+    // table, on it the source comes back so the cells can be typed.
+    if (line.startsWith('|')) {
+      let last = index
+      const run = [line]
+      while (last + 1 < starts.length) {
+        const nextStart = starts[last + 1]
+        const nextEnd = last + 2 < starts.length ? starts[last + 2] - 1 : text.length
+        const next = text.slice(nextStart, nextEnd)
+        if (!next.startsWith('|')) break
+        last += 1
+        run.push(next)
+      }
+      const lastEnd = last + 1 < starts.length ? starts[last + 1] - 1 : text.length
+      const touched = run.some((_, offset) => active.has(index + offset))
+      if (!touched && run.length > 1 && isDelimiterRow(run[1])) {
+        replaces.push({
+          from: start,
+          to: lastEnd,
+          block: true,
+          widget: { type: 'table', text: text.slice(start, lastEnd) },
+        })
+      } else {
+        for (let offset = 0; offset < run.length; offset += 1) {
+          lines.push({ line: index + offset, className: 'cm-table' })
+        }
+      }
+      index = last
+      continue
+    }
+
     let contentStart = 0
 
     const heading = line.match(HEADING)
@@ -153,8 +193,6 @@ export function buildDecorations(text, selections = []) {
           replaces.push({ from: start, to: start + quote[0].length })
           contentStart = quote[0].length
         }
-      } else if (line.startsWith('|')) {
-        lines.push({ line: index, className: 'cm-table' })
       } else if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
         lines.push({ line: index, className: 'cm-rule' })
       }

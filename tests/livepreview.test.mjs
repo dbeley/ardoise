@@ -5,7 +5,7 @@
  *   node tests/livepreview.test.mjs
  */
 import assert from 'node:assert/strict'
-import { buildDecorations, lineStarts, lineAt } from '../src/lib/livepreview.js'
+import { buildDecorations, lineStarts, lineAt, isDelimiterRow } from '../src/lib/livepreview.js'
 
 let passed = 0
 const test = (name, fn) => {
@@ -144,6 +144,56 @@ test('the cursor line keeps the image markup', () => {
   const text = '![A cat|60%](https://x/y.jpg)\n\ntext'
   const active = buildDecorations(text, [{ from: 2, to: 2 }])
   assert.equal(active.replaces.some((replace) => replace.widget), false)
+})
+
+/* ---------------- tables ---------------- */
+
+const table = '| a | b |\n|---|---|\n| 1 | 2 |'
+
+test('a table away from the cursor becomes one block widget', () => {
+  const text = `# T\n\n${table}\n\nrest`
+  const result = buildDecorations(text, [{ from: 0, to: 0 }])
+  const widget = result.replaces.find((replace) => replace.widget?.type === 'table')
+  assert.ok(widget, 'no table widget')
+  assert.equal(widget.block, true)
+  assert.equal(widget.widget.text, table)
+  // The whole run, without its trailing newline.
+  assert.equal(widget.from, text.indexOf('| a'))
+  assert.equal(widget.to, text.indexOf('\n\nrest'))
+  assert.ok(!result.lines.some((line) => line.className === 'cm-table'))
+})
+
+test('the cursor inside the table keeps its markdown', () => {
+  const text = `# T\n\n${table}\n\nrest`
+  const at = text.indexOf('| 1 |')
+  const result = buildDecorations(text, [{ from: at, to: at }])
+  assert.ok(!result.replaces.some((replace) => replace.widget?.type === 'table'))
+  assert.equal(result.lines.filter((line) => line.className === 'cm-table').length, 3)
+})
+
+test('a run without a delimiter row is not a table', () => {
+  const text = '| a | b |\n| 1 | 2 |'
+  const result = buildDecorations(text, [{ from: 0, to: 0 }])
+  assert.ok(!result.replaces.some((replace) => replace.widget?.type === 'table'))
+})
+
+test('a lone pipe line is not a table', () => {
+  const result = buildDecorations('|\n\ntext', [{ from: 0, to: 0 }])
+  assert.ok(!result.replaces.some((replace) => replace.widget?.type === 'table'))
+})
+
+test('a pipe line inside a fence stays code', () => {
+  const text = '```\n| a | b |\n|---|---|\n```'
+  const result = buildDecorations(text, [{ from: 0, to: 0 }])
+  assert.ok(!result.replaces.some((replace) => replace.widget?.type === 'table'))
+})
+
+test('the delimiter row is recognised', () => {
+  assert.ok(isDelimiterRow('|---|---|'))
+  assert.ok(isDelimiterRow('| :-- | --: |'))
+  assert.ok(isDelimiterRow('|---|'))
+  assert.ok(!isDelimiterRow('| a | b |'))
+  assert.ok(!isDelimiterRow('|'))
 })
 
 /* ---------------- positions ---------------- */
