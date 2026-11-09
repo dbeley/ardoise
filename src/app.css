@@ -1280,6 +1280,16 @@ body.is-raw .cm-selectionLayer {
   border-radius: 4px;
 }
 
+/* CodeMirror puts two inline buffers around a widget, and their 1em struts
+   add a blank line above and below the image: the image line is one block. */
+.cm-image-line .cm-widgetBuffer {
+  display: none;
+}
+
+.cm-content .cm-line.cm-image-line {
+  padding: 0;
+}
+
 .cm-image.is-broken {
   color: var(--muted);
   font-style: italic;
