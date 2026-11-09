@@ -456,9 +456,22 @@ export function applyBlockEdit(source, slideIndex, startLine, endLine, text) {
   })
 }
 
-/** Replace a whole slide's markdown (the editor owns it). */
-export function applySlideRaw(source, slideIndex, text) {
-  return rebuild(source, slideIndex, () => String(text ?? '').split('\n'))
+/**
+ * Replace the markdown the editor owns with its text.
+ *
+ * The text may hold separators (`---`): typing one in the editor adds slides.
+ * The buffer then covers `span` slides (how many it covered when it was
+ * loaded, or how many it has now), and they are replaced wholesale. Writing
+ * the same buffer twice is a no-op instead of stacking a fresh copy of the new
+ * slide on every save.
+ */
+export function applySlideRaw(source, slideIndex, text, span = 1) {
+  const { head, body } = splitHead(source)
+  const raws = splitSlides(body)
+  if (slideIndex < 0 || slideIndex >= raws.length) return source
+  const parts = splitSlides(text)
+  raws.splice(slideIndex, Math.max(1, span), ...parts)
+  return `${head}${head ? '\n' : ''}${raws.join('\n\n---\n\n')}\n`
 }
 
 /**

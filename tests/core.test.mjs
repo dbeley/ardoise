@@ -17,6 +17,7 @@ import {
   lineRange,
   lineDeleteRange,
   removeSlide,
+  applySlideRaw,
 } from '../src/lib/deck.js'
 import {
   nextWordStart,
@@ -368,6 +369,24 @@ test('removing the last slide leaves one empty slide', () => {
   assert.equal(removeSlide('only\n', 0), '')
   assert.equal(parseDeck(removeSlide('only\n', 0)).slides.length, 1)
   assert.equal(removeSlide('one\n', 5), 'one\n')
+})
+
+test('a separator typed in the editor buffer adds one slide, once', () => {
+  const raw = '# A\n\n---\n\n# B\n'
+  const once = applySlideRaw(raw, 0, '# A\n\n---\n\n# C')
+  assert.equal(once, '# A\n\n---\n\n# C\n\n---\n\n# B\n')
+  // Writing the same buffer again must not stack a second copy of the new slide.
+  assert.equal(applySlideRaw(once, 0, '# A\n\n---\n\n# C', 2), once)
+  // Dropping the separator again removes the slide it had added.
+  assert.equal(applySlideRaw(once, 0, '# A\n\n', 2), '# A\n\n---\n\n# B\n')
+})
+
+test('a separator typed on the last slide lands after it', () => {
+  const raw = '# A\n\n---\n\n# B\n'
+  assert.equal(
+    applySlideRaw(raw, 1, '# B\n\n---\n\n# C'),
+    '# A\n\n---\n\n# B\n\n---\n\n# C\n'
+  )
 })
 
 /* ---------------- linewise operators ---------------- */

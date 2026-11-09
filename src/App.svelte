@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
-  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, cursorStart, contentLines, lineRange, lineDeleteRange, removeSlide } from './lib/deck.js'
+  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, splitSlides, cursorStart, contentLines, lineRange, lineDeleteRange, removeSlide } from './lib/deck.js'
   import { normalizeKey, isCountDigit } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
@@ -76,6 +76,8 @@
   let writeTimer = null
   let wantedLine = 0
   let loadedKey = ''
+  // How many slides the editor buffer covers: a typed `---` makes it grow.
+  let loadedSpan = 1
   let docVersion = $state(0)
   let lastPending = -1
 
@@ -225,12 +227,23 @@
     return list[clamp(line, 0, list.length - 1)] ?? 0
   }
 
+  /**
+   * Fold the editor buffer back into the source.
+   *
+   * A `---` typed in the buffer adds slides, so the buffer covers as many
+   * slides as it has parts; the next write replaces exactly those.
+   */
+  function writeSlide(value) {
+    source = applySlideRaw(source, slideIndex, value, loadedSpan)
+    loadedSpan = splitSlides(value).length
+  }
+
   function flushWrite() {
     clearTimeout(writeTimer)
     if (!view) return
     const value = view.state.doc.toString()
     if (value !== (slide?.raw ?? '') && loadedKey) {
-      source = applySlideRaw(source, slideIndex, value)
+      writeSlide(value)
       dockText(value)
     }
   }
@@ -243,9 +256,7 @@
     dockText(value)
     syncPending(head(), value)
     clearTimeout(writeTimer)
-    writeTimer = setTimeout(() => {
-      source = applySlideRaw(source, slideIndex, value)
-    }, 300)
+    writeTimer = setTimeout(() => writeSlide(value), 300)
   }
 
   function handleCursor(position, value) {
@@ -294,6 +305,7 @@
     const key = `${slideIndex}:${docVersion}`
     if (loadedKey === key) return
     loadedKey = key
+    loadedSpan = 1
 
     untrack(() => {
       setDocument(currentView, currentSlide.raw, {
