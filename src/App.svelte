@@ -1230,11 +1230,14 @@
         event.preventDefault()
         openSearch()
         return
+      // `J`/`K` mirror `j`/`k`: one slide instead of one line.
       case '>':
+      case 'J':
         event.preventDefault()
         goToSlide(slideIndex + count)
         return
       case '<':
+      case 'K':
         event.preventDefault()
         goToSlide(slideIndex - count)
         return

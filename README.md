@@ -32,7 +32,7 @@ styled source: the cursor enters them like any other block.
 | `j` / `k` | next / previous line (a paragraph is one key, a code block is one key per line) |
 | `}` / `{` | next / previous block (paragraph, list, code block) |
 | `space` | next step, then next slide |
-| `>` / `<` | next / previous slide |
+| `>` / `J` / `<` / `K` | next / previous slide |
 | `D` | delete the current slide (asks first) |
 | `/` | search the deck |
 | `n` / `N` | next / previous match |

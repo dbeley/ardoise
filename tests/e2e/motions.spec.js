@@ -137,3 +137,18 @@ test('D on the last slide keeps the deck alive', async ({ page }) => {
   await expect(page.locator('.dialog-message')).toHaveCount(0)
   await expect(content(page)).toContainText('first')
 })
+
+test('J and K walk the slides like j and k walk the lines', async ({ page }) => {
+  await openDeck(page, '# One\n\nfirst\n\n---\n\n# Two\n\nsecond\n\n---\n\n# Three\n\nthird\n')
+
+  await page.keyboard.press('J')
+  await expect(content(page)).toContainText('second')
+  await page.keyboard.press('J')
+  await page.keyboard.press('J') // stays on the last slide
+  await expect(content(page)).toContainText('third')
+  await page.keyboard.press('K')
+  await expect(content(page)).toContainText('second')
+  await page.keyboard.press('2')
+  await page.keyboard.press('K') // a count on the slide motion
+  await expect(content(page)).toContainText('first')
+})
