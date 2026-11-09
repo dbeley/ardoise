@@ -252,8 +252,11 @@ export function lineDeleteRange(raw, blocks, line, count = 1) {
   const to = range.last + 1 < lines.length ? lineRange(raw, range.last + 1).from : range.to
   const owner = (blocks ?? []).find((b) => b.startLine <= range.first && range.first <= b.endLine)
 
-  // The block keeps other lines: only the selected ones go.
-  if (!owner || range.first > owner.startLine) return { from: range.from, to }
+  // The block keeps lines before or after the selection: only the selected
+  // lines go, each with its newline, so no blank line is left behind.
+  if (!owner || range.first > owner.startLine || range.last < owner.endLine) {
+    return { from: range.from, to }
+  }
 
   let lastBlock = owner
   for (const block of blocks) {

@@ -130,7 +130,8 @@ description shows no caption. It also serves as the `alt` (accessibility, and th
 shown when the image does not load).
 
 `:link` asks for a URL and a text (defaults to the URL) and inserts `[text](url)` at the
-cursor.
+cursor. With the cursor inside a link, `enter` opens it in a new tab (http and https
+only).
 
 ## Search, yank, paste
 
@@ -142,6 +143,24 @@ around the deck; `esc` clears the highlights.
 the cursor and `P` before it; a whole line (`dd`, `yy`) is pasted back as its own
 paragraph.
 The ring keeps the last nine entries: `p` uses the most recent, `"3p` the third.
+
+## Selecting
+
+`v` starts a selection at the cursor, character by character; `V` takes whole lines.
+Every motion extends it (`h l w b e 0 $ j k ↑ ↓ } { gg G`, counts included: `2w`, `3j`),
+and the markdown of the selected lines shows while the selection is live.
+
+| gesture | effect |
+|---|---|
+| `d` / `x` | delete the selection |
+| `y` | yank it (whole lines stay whole lines) |
+| `c` | delete it and type over it |
+| `p` / `P` | paste the register over the selection |
+| `o` | swap the two ends |
+| `v` / `V` | switch between characters and whole lines |
+| `esc` | cancel the selection |
+
+A selection never crosses a slide: `j` stops on the last line of the slide.
 
 ## Speaker notes
 

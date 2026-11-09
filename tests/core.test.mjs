@@ -406,6 +406,14 @@ test('dd takes the separator with a whole block, so no blank line piles up', () 
   assert.equal(tail.slice(...Object.values(lineDeleteRange(tail, scanBlocks(tail).blocks, 2, 1)).slice(0, 2)), '\none')
 })
 
+test('dd on the first line of a paragraph takes its newline', () => {
+  const raw = 'one\ntwo\nthree'
+  const { blocks } = scanBlocks(raw)
+  const range = lineDeleteRange(raw, blocks, 0, 1)
+  assert.equal(raw.slice(range.from, range.to), 'one\n')
+  assert.equal(raw.slice(0, range.from) + raw.slice(range.to), 'two\nthree')
+})
+
 test('dd inside a block only takes its own lines', () => {
   const raw = '## H\ntext\n\nnext'
   const { blocks } = scanBlocks(raw)

@@ -9,8 +9,9 @@
   import { storage, download } from './lib/storage.js'
   import { imageMarkdown, imageInsertion } from './lib/images.js'
   import { codeInsertion } from './lib/code.js'
+  import { visualRange } from './lib/visual.js'
   import { tableInsertion, parseTableSize } from './lib/tables.js'
-  import { linkMarkdown, linkInsertion } from './lib/links.js'
+  import { linkMarkdown, linkInsertion, linkAt } from './lib/links.js'
   import { normalizeUrl } from './lib/urls.js'
   import {
     pushRegister,
@@ -41,6 +42,8 @@
   const TEXT_KEYS = ['h', 'l', 'w', 'b', 'e', '0', '$', '↑', '↓']
   // Motions an operator accepts: characters, lines, and whole blocks (`d}`).
   const MOTION_KEYS = [...TEXT_KEYS, '{', '}']
+  // Motions that drag a visual selection; every other key acts on it.
+  const VISUAL_MOTIONS = [...MOTION_KEYS, 'j', 'k', 'g', 'G']
 
   /* ---------- state ---------- */
 
@@ -79,6 +82,8 @@
   let loadedKey = ''
   // How many slides the editor buffer covers: a typed `---` makes it grow.
   let loadedSpan = 1
+  // `V`: the visual selection takes whole lines instead of characters.
+  let visualLine = $state(false)
   let docVersion = $state(0)
   let lastPending = -1
 
@@ -223,6 +228,94 @@
     view.focus()
   }
 
+  /** Move the cursor; in visual mode, drag the selection's head with it. */
+  function goTo(position) {
+    if (!view) return
+    const target = clamp(position, 0, view.state.doc.length)
+    if (mode !== 'visual') {
+      place(target)
+      return
+    }
+    const anchor = view.state.selection.main.anchor
+    view.dispatch({ selection: { anchor, head: target }, scrollIntoView: true })
+    view.focus()
+  }
+
+  /** `v` / `V`: start a selection at the cursor, characters or whole lines. */
+  function startVisual(linewise = false) {
+    if (!view) return
+    const at = head()
+    setMode('visual')
+    visualLine = linewise
+    view.dispatch({ selection: { anchor: at, head: at } })
+    view.focus()
+  }
+
+  /** Leave visual mode, folding the selection back to `at` (the head by default). */
+  function stopVisual(at = null) {
+    const target = at ?? head()
+    visualLine = false
+    setMode('present')
+    place(target)
+  }
+
+  /** `d`/`x`, `y`, `c` in visual mode: act on the selection. */
+  function applyVisual(op) {
+    if (!view) return
+    const value = text()
+    const range = visualRange(value, view.state.selection.main, {
+      linewise: visualLine,
+      blocks: docBlocks,
+    })
+    if (range.keptTo <= range.keptFrom) {
+      stopVisual()
+      return
+    }
+    remember(value.slice(range.keptFrom, range.keptTo), range.linewise)
+    if (op === 'y') {
+      stopVisual(range.from)
+      return
+    }
+    view.dispatch({
+      changes: { from: range.from, to: range.to, insert: '' },
+      selection: { anchor: range.from },
+      scrollIntoView: true,
+    })
+    if (op === 'c') {
+      visualLine = false
+      setMode('insert')
+      place(range.from)
+      return
+    }
+    stopVisual(range.from)
+  }
+
+  /** `p`/`P` in visual mode: the register replaces the selection. */
+  function pasteOverSelection(count = 1) {
+    if (!view) return
+    const entry = pickRegister(registers, registerIndex)
+    registerIndex = 1
+    if (!entry) {
+      showToast('nothing to paste')
+      return
+    }
+    const value = text()
+    const range = visualRange(value, view.state.selection.main, {
+      linewise: visualLine,
+      blocks: docBlocks,
+    })
+    const body = registerCopies(entry, count)
+    // Whole lines stay whole lines, as with `p` on a `yy` register.
+    const insert = range.linewise || entry.linewise ? `${body}\n` : body
+    const at = range.from + insert.length
+    view.dispatch({
+      changes: { from: range.from, to: range.to, insert },
+      selection: { anchor: at },
+      scrollIntoView: true,
+    })
+    stopVisual(at)
+  }
+
   function lineOffset(line) {
     const list = lineStarts(text())
     return list[clamp(line, 0, list.length - 1)] ?? 0
@@ -338,6 +431,7 @@
 
   function setMode(next) {
     mode = next
+    if (next !== 'visual') visualLine = false
     if (next !== 'insert') {
       pendingOp = null
       pendingCount = 1
@@ -384,7 +478,7 @@
       line = target
     }
     if (line === cursorLine) return false
-    place(lineOffset(line))
+    goTo(lineOffset(line))
     return true
   }
 
@@ -392,29 +486,30 @@
   function nextBlock(count = 1) {
     const next = docBlocks[blockIndex + Math.max(1, Number(count) || 1)]
     if (next) {
-      place(lineOffset(next.startLine))
+      goTo(lineOffset(next.startLine))
       return
     }
-    if (slideIndex < total - 1) goToSlide(slideIndex + 1, 0)
+    // A selection never crosses a slide: the editor holds one slide.
+    if (slideIndex < total - 1 && mode !== 'visual') goToSlide(slideIndex + 1, 0)
   }
 
   function prevBlock(count = 1) {
     const previous = docBlocks[blockIndex - Math.max(1, Number(count) || 1)]
     if (previous) {
-      place(lineOffset(previous.startLine))
+      goTo(lineOffset(previous.startLine))
       return
     }
-    if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
+    if (slideIndex > 0 && mode !== 'visual') goToSlide(slideIndex - 1, -1)
   }
 
   function nextLine(count = 1) {
     if (moveByLine(1, count)) return
-    if (slideIndex < total - 1) goToSlide(slideIndex + 1, 0)
+    if (slideIndex < total - 1 && mode !== 'visual') goToSlide(slideIndex + 1, 0)
   }
 
   function prevLine(count = 1) {
     if (moveByLine(-1, count)) return
-    if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
+    if (slideIndex > 0 && mode !== 'visual') goToSlide(slideIndex - 1, -1)
   }
 
   function nextStep() {
@@ -483,6 +578,20 @@
       selection: { anchor: change.pos },
     })
     place(change.pos)
+  }
+
+  /** `enter` on a link: open it in a new tab. */
+  function openLinkUnderCursor() {
+    if (!view) return
+    const start = lineStart()
+    const link = linkAt(text().slice(start, lineEnd()), head() - start)
+    if (!link) return
+    const url = normalizeUrl(link.url)
+    if (!url) {
+      showToast('only http(s) links open in a tab')
+      return
+    }
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   /** Clear the `hlsearch` marks without touching the text. */
@@ -556,7 +665,7 @@
 
   function applyMotion(key, count = 1) {
     const motion = key === '↑' ? 'k' : key === '↓' ? 'j' : key
-    place(move(text(), head(), motion, count))
+    goTo(move(text(), head(), motion, count))
   }
 
   function applyOperator(op, key, count = 1) {
@@ -1195,6 +1304,28 @@
     // `"3` applies to the next paste only, like Vim's register prefix.
     if (key !== 'p' && key !== 'P') registerIndex = 1
 
+    // Visual mode: motions fall through to the shared code below and drag the
+    // selection; the operators act on it; anything else is swallowed.
+    if (mode === 'visual' && !VISUAL_MOTIONS.includes(key)) {
+      event.preventDefault()
+      if (key === 'esc') {
+        stopVisual()
+      } else if (key === 'V') {
+        visualLine = true
+      } else if (key === 'v') {
+        if (visualLine) visualLine = false
+        else stopVisual()
+      } else if (key === 'o') {
+        const { anchor, head: end } = view.state.selection.main
+        view.dispatch({ selection: { anchor: end, head: anchor } })
+      } else if (key === 'd' || key === 'x' || key === 'y' || key === 'c') {
+        applyVisual(key)
+      } else if (key === 'p' || key === 'P') {
+        pasteOverSelection(count)
+      }
+      return
+    }
+
     if (pendingOp) {
       const op = pendingOp
       // `2dd` carries its count from before the operator; `d2w` carries it on
@@ -1245,6 +1376,10 @@
         event.preventDefault()
         nextStep()
         return
+      case 'enter':
+        event.preventDefault()
+        openLinkUnderCursor()
+        return
       case 'n':
         event.preventDefault()
         searchStep(1, count)
@@ -1272,14 +1407,14 @@
         event.preventDefault()
         const last = docBlocks[docBlocks.length - 1]
         if (hadCount) goToSlide(count - 1)
-        else if (last) place(lineOffset(last.startLine))
+        else if (last) goTo(lineOffset(last.startLine))
         return
       }
       case 'g': {
         event.preventDefault()
         const now = Date.now()
         if (now - lastG < 620) {
-          place(0)
+          goTo(0)
           lastG = 0
         } else {
           lastG = now
@@ -1336,6 +1471,14 @@
       case 'u':
         event.preventDefault()
         undo()
+        return
+      case 'v':
+        event.preventDefault()
+        startVisual(false)
+        return
+      case 'V':
+        event.preventDefault()
+        startVisual(true)
         return
       case 'i':
         event.preventDefault()

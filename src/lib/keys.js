@@ -48,8 +48,19 @@ export const KEYMAP = [
       { keys: ['d', 'w'], label: 'delete (d + motion, d} to the end of the block)' },
       { keys: ['d', 'd'], label: 'delete the line under the cursor' },
       { keys: ['c', 'w'], label: 'change (c + motion)' },
+      { keys: ['enter'], label: 'open the link under the cursor' },
       { keys: ['u'], label: 'undo' },
       { keys: ['esc'], label: 'back to the cursor (normal mode)' },
+    ],
+  },
+  {
+    group: 'Select',
+    items: [
+      { keys: ['v', 'V'], label: 'select characters / whole lines' },
+      { keys: ['d', 'y', 'c'], label: 'delete, yank, change the selection' },
+      { keys: ['p'], label: 'paste over the selection' },
+      { keys: ['o'], label: 'swap the two ends' },
+      { keys: ['esc'], label: 'cancel the selection' },
     ],
   },
   {
