@@ -12,6 +12,7 @@
     { code: ':meta', label: 'edit the frontmatter (title, author, theme)' },
     { code: ':table 3x4', label: 'insert a table (columns x rows)' },
     { code: '![caption|60%](url)', label: 'image, its caption shown under it' },
+    { code: '| a | b |', label: 'table, drawn on the stage' },
     { code: '---', label: 'slide separator' },
   ]
 </script>

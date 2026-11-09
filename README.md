@@ -104,8 +104,10 @@ theme: ardoise
 
 HTML comments stay in the markdown but never reach the rendered output (overview,
 print, speaker notes). A slide is split into **blocks** (headings, paragraphs, lists,
-code, callouts, tables). A table wider than the slide scrolls sideways instead of
-overflowing. The line is the unit of movement and of `dd`/`yy`/`cc`: `j`
+code, callouts, tables). A table is drawn on the stage as it will print — header,
+rows, and a sideways scroll when it is wider than the slide — and its markdown comes
+back while the cursor is inside it, so the cells can be typed. The line is the unit of
+movement and of `dd`/`yy`/`cc`: `j`
 walks every content line of a slide, a code block or a list item included. The block is
 the unit of pacing (`space`): `}`/`{` skip a whole block, `d}` deletes to its end.
 

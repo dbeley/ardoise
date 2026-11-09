@@ -1379,6 +1379,15 @@ body.is-raw .cm-selectionLayer {
   font-size: calc(clamp(0.85rem, 1.1vw, 1.05rem) * var(--type-scale));
 }
 
+/* A table drawn in place: it keeps the slide's own table styles. */
+.cm-table-widget {
+  margin: 0.55em 0;
+}
+
+.cm-table-widget .table-wrap {
+  margin: 0;
+}
+
 .cm-rule {
   color: transparent;
   border-top: 1px solid var(--line);

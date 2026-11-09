@@ -9,6 +9,7 @@ import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/s
 import { EditorView, Decoration, WidgetType, ViewPlugin, drawSelection, keymap } from '@codemirror/view'
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands'
 import { buildDecorations } from './livepreview.js'
+import { renderMarkdown } from './render.js'
 
 const readOnly = new Compartment()
 
@@ -54,16 +55,51 @@ export function setFind(view, ranges) {
   view.dispatch({ effects: setFindMatches.of(ranges) })
 }
 
+/**
+ * A table, drawn where its markdown sits. The wrapper carries `slide`, so the
+ * table rules of the deck apply here too: one table, one stylesheet.
+ */
+class TableWidget extends WidgetType {
+  constructor(spec, dimmed = false) {
+    super()
+    this.spec = spec
+    this.dimmed = dimmed
+  }
+
+  eq(other) {
+    return other.spec.text === this.spec.text && other.dimmed === this.dimmed
+  }
+
+  toDOM() {
+    const wrap = document.createElement('div')
+    wrap.className = this.dimmed ? 'cm-table-widget slide cm-pending' : 'cm-table-widget slide'
+    wrap.innerHTML = renderMarkdown(this.spec.text)
+    return wrap
+  }
+
+  // A click goes to the editor, which puts the cursor in the table: the source
+  // comes back, and the click lands where it was aimed.
+  ignoreEvent() {
+    return false
+  }
+}
+
 function decorations() {
   return EditorView.decorations.compute(['doc', 'selection', pendingAt], (state) => {
     const selections = state.selection.ranges.map((range) => ({ from: range.from, to: range.to }))
     const { lines, marks, replaces } = buildDecorations(state.doc.toString(), selections)
     const pending = state.field(pendingAt, false)
     const ranges = []
+    // A block widget covers whole lines: no line decoration may sit inside it.
+    const blocks = replaces.filter((replace) => replace.block)
+    const inBlock = (position) =>
+      blocks.some((block) => position >= block.from && position <= block.to)
 
     if (Number.isFinite(pending) && pending < state.doc.length) {
       for (let line = state.doc.lineAt(pending).number; line <= state.doc.lines; line += 1) {
-        ranges.push(Decoration.line({ class: 'cm-pending' }).range(state.doc.line(line).from))
+        const from = state.doc.line(line).from
+        if (inBlock(from)) continue
+        ranges.push(Decoration.line({ class: 'cm-pending' }).range(from))
       }
     }
 
@@ -81,10 +117,17 @@ function decorations() {
       }
     }
     for (const replace of replaces) {
-      if (replace.to > replace.from) {
-        const spec = replace.widget ? { widget: new ImageWidget(replace.widget) } : {}
-        ranges.push(Decoration.replace(spec).range(replace.from, replace.to))
+      if (replace.to <= replace.from) continue
+      if (replace.block) {
+        const dimmed = Number.isFinite(pending) && pending <= replace.from
+        const widget = new TableWidget(replace.widget, dimmed)
+        ranges.push(
+          Decoration.replace({ widget, block: true }).range(replace.from, replace.to)
+        )
+        continue
       }
+      const spec = replace.widget ? { widget: new ImageWidget(replace.widget) } : {}
+      ranges.push(Decoration.replace(spec).range(replace.from, replace.to))
     }
 
     return Decoration.set(ranges, true)
