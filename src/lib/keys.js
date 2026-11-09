@@ -16,6 +16,7 @@ export const KEYMAP = [
       { keys: ['}', '{'], label: 'next / previous block (paragraph, list, code)' },
       { keys: ['espace'], label: 'next step (segment, then slide)' },
       { keys: ['>', '<'], label: 'next / previous slide' },
+      { keys: ['D'], label: 'delete the current slide' },
       { keys: ['/', 'n', 'N'], label: 'search, next / previous match' },
       { keys: ['3', 'G'], label: 'jump to slide 3' },
       { keys: ['gg', 'G'], label: 'first / last paragraph of the slide' },

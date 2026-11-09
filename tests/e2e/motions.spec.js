@@ -116,3 +116,24 @@ test('} skips the whole block', async ({ page }) => {
   expect(text).toContain('one')
   expect(text).toContain('three')
 })
+
+test('D deletes the current slide, separator included', async ({ page }) => {
+  await openDeck(page, '# One\n\nfirst\n\n---\n\n# Two\n\nsecond\n')
+  await page.keyboard.press('>') // on the second slide
+  await page.keyboard.press('D')
+  await expect(page.locator('.dialog-message')).toContainText('Delete slide 2')
+  await page.keyboard.press('y')
+  await page.waitForTimeout(900)
+
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ardoise:v1:deck')))
+  expect(saved).toContain('first')
+  expect(saved).not.toContain('second')
+  expect(saved).not.toContain('---')
+})
+
+test('D on the last slide keeps the deck alive', async ({ page }) => {
+  await openDeck(page, '# One\n\nfirst\n')
+  await page.keyboard.press('D')
+  await expect(page.locator('.dialog-message')).toHaveCount(0)
+  await expect(content(page)).toContainText('first')
+})

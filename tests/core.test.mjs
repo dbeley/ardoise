@@ -16,6 +16,7 @@ import {
   contentLines,
   lineRange,
   lineDeleteRange,
+  removeSlide,
 } from '../src/lib/deck.js'
 import {
   nextWordStart,
@@ -346,6 +347,27 @@ test('a block range can span a count of paragraphs', () => {
   assert.deepEqual(blockLineRange(blocks, 0, 2), { startLine: 0, endLine: 2 })
   assert.deepEqual(blockLineRange(blocks, 1, 5), { startLine: 2, endLine: 4 })
   assert.equal(blockLineRange([], 0, 1), null)
+})
+
+/* ---------------- slides ---------------- */
+
+test('removing a slide takes its separator with it', () => {
+  assert.equal(removeSlide('one\n\n---\n\ntwo\n\n---\n\nthree\n', 1), 'one\n\n---\n\nthree\n')
+  assert.equal(removeSlide('one\n\n---\n\ntwo\n', 0), 'two\n')
+  assert.equal(removeSlide('one\n\n---\n\ntwo\n', 1), 'one\n')
+})
+
+test('the frontmatter survives a slide removal', () => {
+  const raw = '---\ntitle: T\n---\n\none\n\n---\n\ntwo\n'
+  // Same join as applySlideRaw: one newline between the header and the body.
+  assert.equal(removeSlide(raw, 0), '---\ntitle: T\n---\ntwo\n')
+  assert.equal(parseDeck(removeSlide(raw, 0)).meta.title, 'T')
+})
+
+test('removing the last slide leaves one empty slide', () => {
+  assert.equal(removeSlide('only\n', 0), '')
+  assert.equal(parseDeck(removeSlide('only\n', 0)).slides.length, 1)
+  assert.equal(removeSlide('one\n', 5), 'one\n')
 })
 
 /* ---------------- linewise operators ---------------- */

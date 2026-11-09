@@ -461,6 +461,20 @@ export function applySlideRaw(source, slideIndex, text) {
   return rebuild(source, slideIndex, () => String(text ?? '').split('\n'))
 }
 
+/**
+ * Remove a slide from the deck, separator included. The frontmatter stays; the
+ * last remaining slide is emptied rather than dropped, so the deck keeps one.
+ */
+export function removeSlide(source, slideIndex) {
+  const { head, body } = splitHead(source)
+  const raws = splitSlides(body)
+  if (slideIndex < 0 || slideIndex >= raws.length) return source
+  raws.splice(slideIndex, 1)
+  const prefix = head ? `${head}\n` : ''
+  if (!raws.length) return prefix
+  return `${prefix}${raws.join('\n\n---\n\n')}\n`
+}
+
 /** Insert a new block right after the given line. */
 export function insertBlockAfter(source, slideIndex, afterLine, text) {
   return rebuild(source, slideIndex, (lines) => {

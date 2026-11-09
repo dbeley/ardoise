@@ -12,6 +12,7 @@ window.
 ```
 j k       line             i        insert          esc   normal mode
 } {       block            d w      delete word     :     commands
+D         delete slide
 ```
 
 ## Modal editing
@@ -32,6 +33,7 @@ styled source: the cursor enters them like any other block.
 | `}` / `{` | next / previous block (paragraph, list, code block) |
 | `space` | next step, then next slide |
 | `>` / `<` | next / previous slide |
+| `D` | delete the current slide (asks first) |
 | `/` | search the deck |
 | `n` / `N` | next / previous match |
 | `h` `l` | character |
@@ -150,6 +152,7 @@ through `BroadcastChannel`; no server, no account.
 | `:tutor` | open the tutorial |
 | `:search` | search the deck (same as `/`) |
 | `:paragraph` | new paragraph after the current block |
+| `:delete slide` | delete the current slide (same as `D`, asks first) |
 | `:image` | insert an image from a URL |
 | `:code` / `:code nix` | insert an empty code block (language optional) |
 | `:link` | insert a link (URL + text) |

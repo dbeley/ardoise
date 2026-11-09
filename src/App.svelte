@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
-  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, cursorStart, contentLines, lineRange, lineDeleteRange } from './lib/deck.js'
+  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, cursorStart, contentLines, lineRange, lineDeleteRange, removeSlide } from './lib/deck.js'
   import { normalizeKey, isCountDigit } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
@@ -744,6 +744,30 @@
     adoptDeck('', 'blank deck')
   }
 
+  /** `D`: delete the slide we are on. Never leaves the deck without a slide. */
+  function deleteSlide() {
+    if (total <= 1) {
+      showToast('last slide: edit it, or :new for a blank deck')
+      return
+    }
+    askConfirm(`Delete slide ${slideIndex + 1} of ${total}? (y / n)`, removeCurrentSlide)
+  }
+
+  function removeCurrentSlide() {
+    flushWrite()
+    const index = slideIndex
+    const target = clamp(index, 0, total - 2)
+    // A pending write would land on the shifted slide.
+    clearTimeout(writeTimer)
+    writeTimer = null
+    source = removeSlide(source, index)
+    slideIndex = target
+    docText = ''
+    cursor = 0
+    docVersion += 1
+    showToast(`slide ${index + 1} deleted`)
+  }
+
   function askConfirm(message, action) {
     confirmMessage = message
     confirmAction = action
@@ -905,6 +929,7 @@
   let commands = $derived([
     { id: 'next', key: 'next', label: 'next paragraph', run: nextBlock },
     { id: 'prev', key: 'prev', label: 'previous paragraph', run: prevBlock },
+    { id: 'slide-delete', key: 'delete slide', alias: ['delslide'], label: 'delete this slide', run: deleteSlide },
     { id: 'search', key: 'search', label: 'search the deck', run: openSearch },
     { id: 'step', key: 'step', label: 'next step (segment)', run: nextStep },
     { id: 'slide', key: 'slide 7', label: 'go to slide', run: (q) => goToSlide(Number(q.split(/\s+/)[1]) - 1) },
@@ -1231,6 +1256,10 @@
         }
         return
       }
+      case 'D':
+        event.preventDefault()
+        deleteSlide()
+        return
       case 'x':
         event.preventDefault()
         deleteChar(count)
