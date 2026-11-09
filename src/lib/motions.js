@@ -139,7 +139,7 @@ export function move(text, pos, motion, count = 1) {
 }
 
 /** Range [start, end) covered by an operator (d, c) followed by a motion.
- * `dd`/`cc` (motion === 'd') renvoie tout le bloc.
+ * `dd`/`cc` (motion === 'd') renvoie la ligne sous le curseur.
  */
 export function operatorRange(text, pos, motion, count = 1) {
   const start = clamp(pos, 0, text.length)
@@ -147,7 +147,7 @@ export function operatorRange(text, pos, motion, count = 1) {
   // `d↓`, `y↓`, `d↑` must work too.
   const key = motion === '↑' ? 'k' : motion === '↓' ? 'j' : motion
 
-  if (key === 'd') return [0, text.length]
+  if (key === 'd') return [lineStart(text, start), lineEnd(text, start)]
 
   switch (key) {
     case 'w': {

@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
-  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, cursorStart, blockLineRange } from './lib/deck.js'
+  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, cursorStart, contentLines, lineRange, lineDeleteRange } from './lib/deck.js'
   import { normalizeKey, isCountDigit } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
@@ -36,6 +36,8 @@
   const THEMES = ['ardoise', 'paper', 'gruvbox', 'nord']
   const params = new URLSearchParams(location.search)
   const TEXT_KEYS = ['h', 'l', 'w', 'b', 'e', '0', '$', '↑', '↓']
+  // Motions an operator accepts: characters, lines, and whole blocks (`d}`).
+  const MOTION_KEYS = [...TEXT_KEYS, '{', '}']
 
   /* ---------- state ---------- */
 
@@ -80,6 +82,7 @@
 
   /* Blocks come from the live document, never from the saved source. */
   let docBlocks = $derived(scanBlocks(docText).blocks)
+  let docLines = $derived(contentLines(docBlocks))
   let starts = $derived(lineStarts(docText))
   let cursorLine = $derived(lineAt(starts, clamp(cursor, 0, docText.length)))
 
@@ -346,8 +349,33 @@
     slideIndex = next
   }
 
-  function nextBlock() {
-    const next = docBlocks[blockIndex + 1]
+  /**
+   * `j`/`k`: one line down/up through the slide, inside blocks too (a code
+   * block, a list item), so every content line is reachable. The cursor lands
+   * at the start of the line, as it did on the start of a paragraph.
+   */
+  function moveByLine(direction, count = 1) {
+    let line = cursorLine
+    for (let n = 0; n < Math.max(1, Number(count) || 1); n += 1) {
+      let target
+      if (direction > 0) {
+        target = docLines.find((candidate) => candidate > line)
+      } else {
+        docLines.forEach((candidate) => {
+          if (candidate < line) target = candidate
+        })
+      }
+      if (target === undefined) break
+      line = target
+    }
+    if (line === cursorLine) return false
+    place(lineOffset(line))
+    return true
+  }
+
+  /** Next/previous block (a whole paragraph, list, fence): `}` and `{`. */
+  function nextBlock(count = 1) {
+    const next = docBlocks[blockIndex + Math.max(1, Number(count) || 1)]
     if (next) {
       place(lineOffset(next.startLine))
       return
@@ -355,12 +383,22 @@
     if (slideIndex < total - 1) goToSlide(slideIndex + 1, 0)
   }
 
-  function prevBlock() {
-    const previous = docBlocks[blockIndex - 1]
+  function prevBlock(count = 1) {
+    const previous = docBlocks[blockIndex - Math.max(1, Number(count) || 1)]
     if (previous) {
       place(lineOffset(previous.startLine))
       return
     }
+    if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
+  }
+
+  function nextLine(count = 1) {
+    if (moveByLine(1, count)) return
+    if (slideIndex < total - 1) goToSlide(slideIndex + 1, 0)
+  }
+
+  function prevLine(count = 1) {
+    if (moveByLine(-1, count)) return
     if (slideIndex > 0) goToSlide(slideIndex - 1, -1)
   }
 
@@ -510,28 +548,51 @@
     const value = text()
     let from = 0
     let to = 0
+    // What the register keeps: the lines themselves, never the separator.
+    let keptFrom = 0
+    let keptTo = 0
     const linewise = key === op
 
     if (linewise) {
-      const range = blockLineRange(docBlocks, blockIndex, count)
-      if (!range) return
-      // `2dd` / `2yy`: the range spans that many blocks, blank lines included.
+      // `dd` / `yy` / `cc` act on the line under the cursor, like Vim: a
+      // heading and the text below it are two lines even when they share a
+      // block. `d}` / `d{` are there for the whole block.
+      const content = lineRange(value, cursorLine, count)
+      const target = op === 'c' ? content : lineDeleteRange(value, docBlocks, cursorLine, count)
+      from = target.from
+      to = target.to
+      keptFrom = content.from
+      keptTo = content.to
+    } else if (key === '}' || key === '{') {
+      // The block motion: `d}` takes the lines from the cursor to the end of
+      // the block, `d{` from its start, tidied like a linewise delete.
+      const block = docBlocks[blockIndex]
+      if (!block) return
       const lines = value.split('\n')
-      from = lineOffset(range.startLine)
-      to = lineOffset(range.endLine) + (lines[range.endLine]?.length ?? 0)
+      const blockStart = lineOffset(block.startLine)
+      const blockEnd = lineOffset(block.endLine) + (lines[block.endLine]?.length ?? 0)
+      const first = key === '}' ? clamp(cursorLine, block.startLine, block.endLine) : block.startLine
+      const last = key === '}' ? block.endLine : clamp(cursorLine, block.startLine, block.endLine)
+      const target = lineDeleteRange(value, docBlocks, first, last - first + 1)
+      from = target.from
+      to = target.to
+      keptFrom = key === '}' ? clamp(head(), blockStart, blockEnd) : blockStart
+      keptTo = key === '}' ? blockEnd : clamp(head(), blockStart, blockEnd)
     } else {
       ;[from, to] = operatorRange(value, head(), key, count)
+      keptFrom = from
+      keptTo = to
     }
 
-    if (to <= from) return
+    if (to <= from || keptTo <= keptFrom) return
 
     if (op === 'y') {
-      remember(value.slice(from, to), linewise)
+      remember(value.slice(keptFrom, keptTo), linewise)
       place(from)
       return
     }
 
-    remember(value.slice(from, to), linewise)
+    remember(value.slice(keptFrom, keptTo), linewise)
     view.dispatch({ changes: { from, to, insert: '' }, selection: { anchor: from } })
     place(from)
     if (op === 'c') setMode('insert')
@@ -1089,7 +1150,7 @@
       const times = hadCount ? count : pendingCount
       pendingOp = null
       pendingCount = 1
-      if (key === op || TEXT_KEYS.includes(key)) {
+      if (key === op || MOTION_KEYS.includes(key)) {
         // `c` switches to insert mode during this same keydown: without this,
         // the browser's default action types the motion key (cw -> "w").
         event.preventDefault()
@@ -1114,11 +1175,19 @@
         return
       case 'j':
         event.preventDefault()
-        for (let n = 0; n < count; n += 1) nextBlock()
+        nextLine(count)
         return
       case 'k':
         event.preventDefault()
-        for (let n = 0; n < count; n += 1) prevBlock()
+        prevLine(count)
+        return
+      case '}':
+        event.preventDefault()
+        nextBlock(count)
+        return
+      case '{':
+        event.preventDefault()
+        prevBlock(count)
         return
       case 'espace':
         event.preventDefault()

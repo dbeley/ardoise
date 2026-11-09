@@ -13,6 +13,9 @@ import {
   serialize,
   cursorStart,
   blockLineRange,
+  contentLines,
+  lineRange,
+  lineDeleteRange,
 } from '../src/lib/deck.js'
 import {
   nextWordStart,
@@ -252,8 +255,9 @@ test('d0 deletes from line start to the cursor', () => {
   assert.deepEqual([from, to], [0, 4])
 })
 
-test('dd targets the whole block', () => {
-  assert.deepEqual(operatorRange(text, 3, 'd'), [0, text.length])
+test('dd targets the line under the cursor', () => {
+  assert.deepEqual(operatorRange('one\ntwo three', 5, 'd'), [4, 13])
+  assert.deepEqual(operatorRange('one\ntwo', 0, 'd'), [0, 3])
 })
 
 test('deleting a range puts the cursor back', () => {
@@ -330,12 +334,47 @@ test('a fence inside a comment is not a code block', () => {
   assert.deepEqual(scanBlocks(raw).blocks.map((b) => b.text), ['text'])
 })
 
+test('the cursor can stop on every block line, not just the first', () => {
+  const raw = ['# Title', '', 'alpha', 'beta', '', '- one', '- two', '', '```nix', 'a', '```', '', '<!-- pause -->', '', 'tail'].join('\n')
+  const { blocks } = scanBlocks(raw)
+  assert.deepEqual(contentLines(blocks), [0, 2, 3, 5, 6, 8, 9, 10, 14])
+})
+
 test('a block range can span a count of paragraphs', () => {
   const { blocks } = scanBlocks('one\n\ntwo\n\nthree')
   assert.deepEqual(blockLineRange(blocks, 0, 1), { startLine: 0, endLine: 0 })
   assert.deepEqual(blockLineRange(blocks, 0, 2), { startLine: 0, endLine: 2 })
   assert.deepEqual(blockLineRange(blocks, 1, 5), { startLine: 2, endLine: 4 })
   assert.equal(blockLineRange([], 0, 1), null)
+})
+
+/* ---------------- linewise operators ---------------- */
+
+test('a line range covers whole lines', () => {
+  const raw = '# T\n\nalpha\nbeta'
+  assert.deepEqual(lineRange(raw, 2, 1), { from: 5, to: 10, first: 2, last: 2 })
+  assert.deepEqual(lineRange(raw, 2, 2), { from: 5, to: 15, first: 2, last: 3 })
+})
+
+test('dd takes the separator with a whole block, so no blank line piles up', () => {
+  const raw = '# T\n\none\n\ntwo'
+  const { blocks } = scanBlocks(raw)
+  assert.equal(raw.slice(...Object.values(lineDeleteRange(raw, blocks, 2, 1)).slice(0, 2)), 'one\n\n')
+  // last block: the separator before it goes instead
+  const tail = '# T\n\none'
+  assert.equal(tail.slice(...Object.values(lineDeleteRange(tail, scanBlocks(tail).blocks, 2, 1)).slice(0, 2)), '\none')
+})
+
+test('dd inside a block only takes its own lines', () => {
+  const raw = '## H\ntext\n\nnext'
+  const { blocks } = scanBlocks(raw)
+  const range = lineDeleteRange(raw, blocks, 1, 1)
+  assert.equal(raw.slice(range.from, range.to), 'text\n')
+  assert.equal(raw.slice(0, range.from) + raw.slice(range.to), '## H\n\nnext')
+
+  const list = '- a\n- b\n- c'
+  const lines = lineDeleteRange(list, scanBlocks(list).blocks, 1, 1)
+  assert.equal(list.slice(0, lines.from) + list.slice(lines.to), '- a\n- c')
 })
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)

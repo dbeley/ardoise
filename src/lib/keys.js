@@ -3,15 +3,17 @@
  * The same table feeds the event handler and the `?` help, so the help cannot
  * drift from the real behaviour.
  *
- * Model: one cursor inside the deck. The paragraph is the unit of navigation
- * (and therefore of pacing); word and character are the units of editing.
+ * Model: one cursor inside the deck. The line is the unit of vertical
+ * movement and of `dd`/`yy`/`cc` (a paragraph is one key, a code block is one
+ * key per line); the block is the unit of pacing (`space`, `}`, `{`).
  */
 
 export const KEYMAP = [
   {
     group: 'Move',
     items: [
-      { keys: ['j', 'k'], label: 'next / previous paragraph' },
+      { keys: ['j', 'k'], label: 'next / previous line (inside blocks too)' },
+      { keys: ['}', '{'], label: 'next / previous block (paragraph, list, code)' },
       { keys: ['espace'], label: 'next step (segment, then slide)' },
       { keys: ['>', '<'], label: 'next / previous slide' },
       { keys: ['/', 'n', 'N'], label: 'search, next / previous match' },
@@ -25,7 +27,7 @@ export const KEYMAP = [
       { keys: ['h', 'l'], label: 'character' },
       { keys: ['w', 'b', 'e'], label: 'next word, previous word, word end' },
       { keys: ['0', '$'], label: 'start / end of line' },
-      { keys: ['↑', '↓'], label: 'line inside the block' },
+      { keys: ['↑', '↓'], label: 'line inside the block, keeping the column' },
       { keys: ['2', 'w'], label: 'count on a motion' },
     ],
   },
@@ -38,11 +40,12 @@ export const KEYMAP = [
       { keys: ['O'], label: 'new paragraph after' },
       { keys: ['x'], label: 'delete character' },
       { keys: ['r'], label: 'replace a character' },
-      { keys: ['y', 'yy'], label: 'yank (y + motion, or the block)' },
+      { keys: ['y', 'yy'], label: 'yank (y + motion, or the line)' },
       { keys: ['p', 'P'], label: 'paste after / before' },
       { keys: ['"1p'], label: 'paste from register 1-9' },
       { keys: ['Tab'], label: 'indent / outdent a list item' },
-      { keys: ['d', 'w'], label: 'delete (d + motion)' },
+      { keys: ['d', 'w'], label: 'delete (d + motion, d} to the end of the block)' },
+      { keys: ['d', 'd'], label: 'delete the line under the cursor' },
       { keys: ['c', 'w'], label: 'change (c + motion)' },
       { keys: ['u'], label: 'undo' },
       { keys: ['esc'], label: 'back to the cursor (normal mode)' },

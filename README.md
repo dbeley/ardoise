@@ -10,8 +10,8 @@ edit it live, with Vim keybindings, while you present. Speaker notes can be open
 window.
 
 ```
-j k       paragraph        i        insert          esc   normal mode
-space     next step        d w      delete word     :     commands
+j k       line             i        insert          esc   normal mode
+} {       block            d w      delete word     :     commands
 ```
 
 ## Modal editing
@@ -28,7 +28,8 @@ styled source: the cursor enters them like any other block.
 
 | key | gesture |
 |---|---|
-| `j` / `k` | next / previous paragraph |
+| `j` / `k` | next / previous line (a paragraph is one key, a code block is one key per line) |
+| `}` / `{` | next / previous block (paragraph, list, code block) |
 | `space` | next step, then next slide |
 | `>` / `<` | next / previous slide |
 | `/` | search the deck |
@@ -36,20 +37,20 @@ styled source: the cursor enters them like any other block.
 | `h` `l` | character |
 | `w` `b` `e` | next word, previous word, word end |
 | `0` `$` | start / end of line |
-| `↑` `↓` | line inside the block |
+| `↑` `↓` | line, keeping the column |
 | `gg` / `G` | first / last paragraph of the slide |
 | `3` `G` | go to slide 3 |
 | `i` `a` `A` `I` | insert: before, after, end of line, start of line |
 | `O` | new paragraph after the current block |
 | `x` | delete a character |
 | `r` + char | replace a character (`3ra` replaces three) |
-| `y` + motion | yank (`yw`, `yy` for the whole block) |
+| `y` + motion | yank (`yw`, `yy` for the line) |
 | `p` / `P` | paste after / before the cursor (or the block) |
 | `"2p` | paste from register 2 (`"1` is the most recent) |
 | `Tab` / `Shift+Tab` | indent / outdent a list item (nested lists) |
-| `d` + motion | delete (`dw`, `de`, `d0`, `d$`) |
-| `d` `d` | delete the whole block |
-| `c` + motion | change (`cw`, `cc`) |
+| `d` + motion | delete (`dw`, `de`, `d0`, `d$`, `d}` to the end of the block) |
+| `d` `d` | delete the line under the cursor |
+| `c` + motion | change (`cw`, `cc` for the line) |
 | `u` | undo |
 | `esc` | back to normal mode |
 | `.` | black screen |
@@ -100,8 +101,9 @@ theme: ardoise
 
 HTML comments stay in the markdown but never reach the rendered output (overview,
 print, speaker notes). A slide is split into **blocks** (headings, paragraphs, lists,
-code, callouts, tables); the block is the unit of the cursor, of navigation and of
-`dd`/`cc`.
+code, callouts, tables). The line is the unit of movement and of `dd`/`yy`/`cc`: `j`
+walks every content line of a slide, a code block or a list item included. The block is
+the unit of pacing (`space`): `}`/`{` skip a whole block, `d}` deletes to its end.
 
 ## Images and links
 
@@ -125,7 +127,8 @@ after the cursor (changing slide if needed), `n` and `N` walk the matches and wr
 around the deck; `esc` clears the highlights.
 
 `x`, `d` and `c` feed the yank ring, `y`/`yy` copy without deleting. `p` pastes after
-the cursor and `P` before it; a block (`dd`, `yy`) is pasted back as its own paragraph.
+the cursor and `P` before it; a whole line (`dd`, `yy`) is pasted back as its own
+paragraph.
 The ring keeps the last nine entries: `p` uses the most recent, `"3p` the third.
 
 ## Speaker notes

@@ -198,8 +198,21 @@ export function scanBlocks(raw) {
 }
 
 /**
+ * Lines the cursor can stop on, in order: every line of every block. Blank
+ * lines and standalone comments (notes, pauses) belong to no block, so a
+ * vertical move never lands on a separator.
+ */
+export function contentLines(blocks) {
+  const lines = []
+  for (const block of blocks) {
+    for (let line = block.startLine; line <= block.endLine; line += 1) lines.push(line)
+  }
+  return lines
+}
+
+/**
  * Line range covered by `count` blocks starting at `index`, inclusive.
- * Used by `dd`/`yy` so a count spans consecutive paragraphs.
+ * A count of blocks, where `lineRange` counts lines.
  */
 export function blockLineRange(blocks, index, count = 1) {
   if (!blocks.length) return null
@@ -210,6 +223,52 @@ export function blockLineRange(blocks, index, count = 1) {
 
 function clampIndex(value, length) {
   return Math.max(0, Math.min(Math.max(0, Number(value) || 0), length - 1))
+}
+
+/** Offsets of `count` whole lines from `line`, trailing newline excluded. */
+export function lineRange(raw, line, count = 1) {
+  const lines = String(raw ?? '').split('\n')
+  const first = clampIndex(line, lines.length)
+  const last = clampIndex(first + Math.max(1, Number(count) || 1) - 1, lines.length)
+  let from = 0
+  for (let i = 0; i < first; i += 1) from += lines[i].length + 1
+  let to = from
+  for (let i = first; i <= last; i += 1) to += lines[i].length + 1
+  return { from, to: to - 1, first, last }
+}
+
+/**
+ * Offsets `dd`/`yy` remove for `count` lines from `line`.
+ *
+ * Inside a block they are the lines themselves. When the range takes a whole
+ * block away, the blank line that separated it goes too: deleting a paragraph
+ * must not leave two blank lines behind, or glue the neighbours together.
+ */
+export function lineDeleteRange(raw, blocks, line, count = 1) {
+  const lines = String(raw ?? '').split('\n')
+  const range = lineRange(raw, line, count)
+  // A deleted line goes with its newline, or the neighbours would leave a
+  // blank line behind (and split a list in two).
+  const to = range.last + 1 < lines.length ? lineRange(raw, range.last + 1).from : range.to
+  const owner = (blocks ?? []).find((b) => b.startLine <= range.first && range.first <= b.endLine)
+
+  // The block keeps other lines: only the selected ones go.
+  if (!owner || range.first > owner.startLine) return { from: range.from, to }
+
+  let lastBlock = owner
+  for (const block of blocks) {
+    if (block.startLine <= range.last) lastBlock = block
+  }
+
+  // The separator after the block, or the one before when it ends the slide.
+  const after = lastBlock.endLine + 2
+  if (after < lines.length) {
+    return { from: range.from, to: lineRange(raw, after).from }
+  }
+  if (range.first > 0 && !lines[range.first - 1].trim()) {
+    return { from: lineRange(raw, range.first - 1).from, to: range.to }
+  }
+  return { from: range.from, to: range.to }
 }
 
 /**
