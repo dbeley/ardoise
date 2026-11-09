@@ -4,7 +4,8 @@
  *   node tests/links.test.mjs
  */
 import assert from 'node:assert/strict'
-import { linkMarkdown, linkInsertion } from '../src/lib/links.js'
+import {
+  linkAt, linkMarkdown, linkInsertion } from '../src/lib/links.js'
 
 let passed = 0
 const test = (name, fn) => {
@@ -44,6 +45,23 @@ test('a link inside text is padded with spaces', () => {
 
 test('a link between newlines is not padded', () => {
   assert.equal(linkInsertion('a\n\nb', 2, '[x](u)').insert, '[x](u)')
+})
+
+test('the link under the cursor is found', () => {
+  const line = 'see [the docs](https://example.com/x) here'
+  assert.deepEqual(linkAt(line, 8), {
+    text: 'the docs',
+    url: 'https://example.com/x',
+    from: 4,
+    to: 37,
+  })
+  assert.equal(linkAt(line, 0), null)
+  assert.equal(linkAt('no link here', 3), null)
+})
+
+test('an image is not a link to follow', () => {
+  assert.equal(linkAt('![A cat](https://x/y.jpg)', 2), null)
+  assert.equal(linkAt('![A cat](https://x/y.jpg) and [a](https://b)', 30).url, 'https://b')
 })
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' - failures above' : ''}`)

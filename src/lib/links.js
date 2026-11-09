@@ -33,3 +33,22 @@ export function linkInsertion(source, at, markup) {
   const insert = `${lead}${markup}${trail}`
   return { at: position, insert, pos: position + insert.length }
 }
+
+/**
+ * The link the cursor sits in on its line: `[text](url)`, or `null`. An image
+ * (`![alt](url)`) is not a link: the cursor is not "on" it to follow it.
+ */
+export function linkAt(line, offset) {
+  const text = String(line ?? '')
+  const at = Number(offset) || 0
+  const re = /\[([^\]]*)\]\(([^)\s]+)\)/g
+  let match
+  while ((match = re.exec(text))) {
+    const from = match.index
+    const to = from + match[0].length
+    if (at < from || at > to) continue
+    if (from > 0 && text[from - 1] === '!') continue
+    return { text: match[1], url: match[2], from, to }
+  }
+  return null
+}
