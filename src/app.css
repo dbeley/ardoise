@@ -910,43 +910,54 @@ kbd {
   background: var(--bg);
   cursor: pointer;
   padding: 0;
+  text-align: left;
 }
 
 .thumb-inner {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 1280px;
-  height: 720px;
-  transform-origin: top left;
-  transform: scale(calc(100cqw / 1280));
-  padding: 60px 90px;
+  inset: 0;
+  padding: 4.7cqw 7cqw;
+  /* The slide rules size their type in vw, which ignores the thumb's box: here
+     everything is a fraction of the thumb's width (a 1280px stage), so the
+     miniature keeps the slide's proportions. */
+  font-size: 2.03cqw;
+  text-align: left;
   pointer-events: none;
 }
 
 .thumb-inner h1 {
-  font-size: 62px;
+  font-size: 4.84cqw;
   margin-bottom: 0.3em;
   padding-bottom: 0.3em;
 }
 
 .thumb-inner h2 {
-  font-size: 48px;
+  font-size: 3.75cqw;
   padding-bottom: 0.25em;
 }
 
+.thumb-inner h3 {
+  font-size: 2.81cqw;
+}
+
+.thumb-inner h4 {
+  font-size: 2.34cqw;
+}
+
 .thumb-inner p,
-.thumb-inner li {
-  font-size: 26px;
+.thumb-inner li,
+.thumb-inner td,
+.thumb-inner th {
+  font-size: 2.03cqw;
 }
 
 .thumb-inner .code code {
-  font-size: 20px;
+  font-size: 1.56cqw;
 }
 
 .thumb-inner .box-body p,
 .thumb-inner .box-body li {
-  font-size: 24px;
+  font-size: 1.87cqw;
 }
 
 .thumb.is-active {
@@ -954,10 +965,11 @@ kbd {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
+/* Top-right: a slide is left-aligned, so the number never covers the title. */
 .thumb-index {
   position: absolute;
   top: 0.4rem;
-  left: 0.5rem;
+  right: 0.5rem;
   z-index: 2;
   font-size: 0.62rem;
   letter-spacing: 0.1em;
