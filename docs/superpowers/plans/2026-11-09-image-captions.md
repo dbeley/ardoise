@@ -35,7 +35,8 @@
 
 **Files:**
 - Modify: `src/lib/render.js` (paragraph rules + image rule)
-- Modify: `src/app.css` (`.slide figure`, `.slide figcaption`, replace `p > img:only-child`)
+- Modify: `src/lib/editor.js` (`ImageWidget`: caption under the image, width on the wrapper)
+- Modify: `src/app.css` (`.slide figure`, `.slide figcaption`, `.cm-image`, `.cm-image-caption`)
 - Test: `tests/render.test.mjs`
 
 **Interfaces:**
@@ -118,7 +119,15 @@ paragraph (`env.figure !== undefined`), so the width is not duplicated:
 if (width && env.figure === undefined) token.attrSet('style', `width:${width}%`)
 ```
 
-- [ ] **Step 4: Style it**
+- [ ] **Step 4: The widget draws the caption too**
+
+The stage is the editor, so the caption has to be in the image widget as well: in
+`ImageWidget.toDOM`, put the width on the wrapper (`wrap.style.width = `${width}%``, the
+image keeps `width: 100%` of it) and append a `<span class="cm-image-caption">` holding
+the alt when it is not empty. CSS: `.cm-image { display: block; max-width: 100% }` and
+`.cm-image-caption` styled like `.slide figcaption`.
+
+- [ ] **Step 5: Style it**
 
 Replace `.slide p > img:only-child` with:
 
@@ -141,17 +150,17 @@ Replace `.slide p > img:only-child` with:
 }
 ```
 
-- [ ] **Step 5: Run the tests**
+- [ ] **Step 6: Run the tests**
 
 Run: `npm test` — Expected: all checks pass. Then `npm run build`.
 
-- [ ] **Step 6: Look at it**
+- [ ] **Step 7: Look at it**
 
 Seed a deck with `![A cat on a keyboard|60%](…)` plus text under it, screenshot the
 stage and the overview, and check the caption is small, muted, centred under the image
 and inside the image's width.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add -A && git commit -m "feat(images): render a lone image as a figure with its alt as caption"

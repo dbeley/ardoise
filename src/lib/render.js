@@ -105,8 +105,41 @@ function buildMarkdown() {
     const { alt, width } = parseImageAlt(rawAlt)
     token.attrSet('alt', alt)
     token.attrSet('loading', 'lazy')
-    if (width) token.attrSet('style', `width:${width}%`)
+    // Alone in its paragraph, the image is a figure: the width is on the
+    // figure, so the caption under it is as wide as the image.
+    if (width && env.figure === undefined) token.attrSet('style', `width:${width}%`)
     return self.renderToken(tokens, idx, options)
+  }
+
+  // An image alone in a paragraph is a figure, and its alt is the caption:
+  // the text under the image is then unmistakably about that image.
+  const paragraphOpen =
+    md.renderer.rules.paragraph_open || ((t, i, o, e, s) => s.renderToken(t, i, o))
+  const paragraphClose =
+    md.renderer.rules.paragraph_close || ((t, i, o, e, s) => s.renderToken(t, i, o))
+
+  const figureImage = (tokens, idx) => {
+    const inline = tokens[idx + 1]
+    if (!inline || inline.type !== 'inline' || !inline.children) return null
+    const content = inline.children.filter((t) => t.type !== 'text' || t.content.trim())
+    return content.length === 1 && content[0].type === 'image' ? content[0] : null
+  }
+
+  md.renderer.rules.paragraph_open = (tokens, idx, options, env, self) => {
+    const image = figureImage(tokens, idx)
+    if (!image) return paragraphOpen(tokens, idx, options, env, self)
+    const rawAlt = self.renderInlineAsText(image.children, options, env)
+    const { alt, width } = parseImageAlt(rawAlt)
+    env.figure = alt
+    return `<figure class="figure"${width ? ` style="width:${width}%"` : ''}>`
+  }
+
+  md.renderer.rules.paragraph_close = (tokens, idx, options, env, self) => {
+    if (env.figure === undefined) return paragraphClose(tokens, idx, options, env, self)
+    const alt = env.figure
+    delete env.figure
+    const caption = alt ? `<figcaption>${md.utils.escapeHtml(alt)}</figcaption>` : ''
+    return `${caption}</figure>`
   }
 
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {

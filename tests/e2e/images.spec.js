@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { openDeck } from './helpers.js'
 
 test('an image line is one block, with no blank leading around it', async ({ page }) => {
-  await openDeck(page, '# T\n\nbefore\n\n![mark](/favicon.svg)\n\nafter\n')
+  await openDeck(page, '# T\n\nbefore\n\n![](/favicon.svg)\n\nafter\n')
 
   const image = page.locator('.cm-image img')
   await image.waitFor()
@@ -28,4 +28,19 @@ test('an image line is one block, with no blank leading around it', async ({ pag
   // CodeMirror's widget buffers used to add a blank line above and below.
   expect(metrics.line - metrics.image).toBeLessThan(6)
   expect(metrics.offset).toBeLessThan(3)
+})
+
+test('the caption sits under the image, as wide as it', async ({ page }) => {
+  await openDeck(page, '# T\n\n![A cat on a keyboard|60%](/favicon.svg)\n')
+
+  const image = page.locator('.cm-image img')
+  await image.waitFor()
+  const caption = page.locator('.cm-image-caption')
+  await expect(caption).toHaveText('A cat on a keyboard')
+
+  const img = await image.boundingBox()
+  const cap = await caption.boundingBox()
+  // Same width as the image, right below it.
+  expect(Math.abs(cap.width - img.width)).toBeLessThan(2)
+  expect(cap.y).toBeGreaterThanOrEqual(img.y + img.height - 1)
 })

@@ -35,8 +35,9 @@ the slide. And tables are supported but nothing helps type one.
   `<img>` as today.
 - **Every view** goes through the same renderer, so the overview, the print/PDF export
   and the stage all get the figure.
-- **Editor**: the CodeMirror image widget keeps showing the bare image; the cursor's
-  line still shows the markup.
+- **Editor**: the stage *is* the editor, so the CodeMirror image widget draws the caption
+  under the image too (`alt` as a small muted line, as wide as the image); the cursor's
+  line still shows the markup instead of the widget.
 - **Dialog**: the `:image` dialog's second field becomes the caption (label
   `caption (optional)`), since that is what the alt now is.
 

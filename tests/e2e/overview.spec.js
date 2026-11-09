@@ -25,3 +25,9 @@ test('a thumbnail shows the whole slide, shrunk to its box', async ({ page }) =>
   expect(title.x).toBeGreaterThanOrEqual(box.x)
   expect(title.x + title.width).toBeLessThanOrEqual(box.x + box.width)
 })
+
+test('a thumbnail shows the caption under the image', async ({ page }) => {
+  await openDeck(page, '# A\n\n![A cat](/favicon.svg)\n')
+  await page.keyboard.press('o')
+  await expect(page.locator('.thumb figcaption')).toHaveText('A cat')
+})

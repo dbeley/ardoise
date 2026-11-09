@@ -271,9 +271,23 @@ body {
   border: 1px solid var(--line);
 }
 
-/* A lone image at the default width fills the slide, like the 100% preview. */
-.slide p > img:only-child {
+/* An image alone in its paragraph is a figure: at the default width it fills
+   the slide, like the 100% preview, and its caption sits right under it. */
+.slide figure {
+  margin: 0 0 1.3em;
+}
+
+.slide figure img {
   width: 100%;
+}
+
+.slide figcaption {
+  margin-top: 0.45em;
+  font-size: 0.82em;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: pretty;
 }
 
 .slide code:not(.hljs) {
@@ -1128,6 +1142,7 @@ kbd {
 }
 
 .block > p,
+.block > figure,
 .block > ul,
 .block > ol,
 .block > blockquote,
@@ -1285,11 +1300,27 @@ body.is-raw .cm-selectionLayer {
   color: var(--accent);
 }
 
+.cm-image {
+  display: block;
+  max-width: 100%;
+}
+
 .cm-image img {
   display: block;
   width: 100%;
   max-width: 100%;
   border-radius: 4px;
+}
+
+/* The alt is the caption, under the image and as wide as it. */
+.cm-image-caption {
+  display: block;
+  margin-top: 0.45em;
+  font-size: 0.82em;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: pretty;
 }
 
 /* CodeMirror puts two inline buffers around a widget, and their 1em struts

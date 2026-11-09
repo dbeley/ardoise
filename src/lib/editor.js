@@ -152,16 +152,26 @@ class ImageWidget extends WidgetType {
   toDOM() {
     const wrap = document.createElement('span')
     wrap.className = 'cm-image'
+    // The width is on the wrapper so the caption under the image is as wide as
+    // the image, exactly like the rendered figure.
+    if (this.spec.width) wrap.style.width = `${this.spec.width}%`
     const img = document.createElement('img')
     img.src = this.spec.src
     img.alt = this.spec.alt || ''
     img.loading = 'lazy'
-    if (this.spec.width) img.style.width = `${this.spec.width}%`
     img.onerror = () => {
       wrap.classList.add('is-broken')
       wrap.textContent = this.spec.alt || 'image unavailable'
     }
     wrap.appendChild(img)
+    // The alt is the caption: the stage is the editor, so this is where the
+    // caption is read while presenting.
+    if (this.spec.alt) {
+      const caption = document.createElement('span')
+      caption.className = 'cm-image-caption'
+      caption.textContent = this.spec.alt
+      wrap.appendChild(caption)
+    }
     return wrap
   }
 
