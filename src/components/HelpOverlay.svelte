@@ -39,7 +39,7 @@
               <div class="help-row">
                 <span>{item.label}</span>
                 <span class="help-keys">
-                  {#each item.keys as key (key)}
+                  {#each item.keys as key, index (index)}
                     <kbd>{prettyKey(key)}</kbd>
                   {/each}
                 </span>
