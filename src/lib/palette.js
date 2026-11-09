@@ -6,11 +6,23 @@
  * could shadow the command whose key is exactly the word typed ("paragraph").
  */
 
+/** `key` plus optional vim-style `alias` entries (`w` for save). */
+function names(command) {
+  const aliases = command.alias === undefined ? [] : [].concat(command.alias)
+  return [command.key, ...aliases].map((name) => String(name).toLowerCase())
+}
+
 function keyScore(command, head) {
-  const key = String(command.key).toLowerCase()
-  if (key === head) return 2
-  if (key.startsWith(head)) return 1
-  return 0
+  let score = 0
+  for (const key of names(command)) {
+    if (key === head) score = 2
+    else if (key.startsWith(head) && score < 1) score = 1
+  }
+  return score
+}
+
+function haystack(command) {
+  return [...names(command), String(command.label).toLowerCase()].join(' ')
 }
 
 export function matchCommands(commands, query) {
@@ -18,7 +30,7 @@ export function matchCommands(commands, query) {
   if (!words.length) return commands
 
   const strict = commands.filter((command) =>
-    words.every((word) => `${command.key} ${command.label}`.toLowerCase().includes(word))
+    words.every((word) => haystack(command).includes(word))
   )
   if (strict.length) {
     const head = words[0]
@@ -29,10 +41,12 @@ export function matchCommands(commands, query) {
   // `theme paper`: the first word picks the command, the rest is passed to it.
   const head = words[0]
   return commands
-    .filter(
-      (command) =>
-        String(command.key).toLowerCase().split(' ')[0].startsWith(head) ||
+    .filter((command) => {
+      const heads = names(command).map((name) => name.split(' ')[0])
+      return (
+        heads.some((name) => name.startsWith(head)) ||
         String(command.label).toLowerCase().startsWith(head)
-    )
+      )
+    })
     .slice(0, 1)
 }

@@ -654,6 +654,28 @@ body.is-raw {
   border-color: var(--accent);
 }
 
+.dialog-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dialog-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.dialog-message {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
 .image-preview {
   display: flex;
   align-items: center;
@@ -857,6 +879,11 @@ kbd {
 .command-item code {
   color: var(--accent);
   font-size: 0.88rem;
+}
+
+.command-item .command-alias {
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .command-item span {

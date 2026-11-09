@@ -47,6 +47,14 @@ test('an argument falls back to the command named by the first word', () => {
   assert.equal(matchCommands(commands, 'tutor please')[0].id, 'tutor')
 })
 
+test('an alias wins over a label or key substring, like :w for :save', () => {
+  const withAlias = [
+    ...commands,
+    { id: 'save', key: 'save', alias: ['w'], label: 'download the markdown' },
+  ]
+  assert.equal(matchCommands(withAlias, 'w')[0].id, 'save')
+})
+
 test('an unknown query matches nothing', () => {
   assert.deepEqual(matchCommands(commands, 'zzz'), [])
 })

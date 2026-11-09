@@ -87,6 +87,9 @@
           onkeydown={() => {}}
         >
           <code>{command.key}</code>
+          {#if command.alias?.length}
+            <code class="command-alias">{command.alias.join(' · ')}</code>
+          {/if}
           <em style="font-style:normal">{command.label}</em>
           {#if command.hint}<span>{command.hint}</span>{/if}
         </li>

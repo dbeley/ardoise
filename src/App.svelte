@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick, untrack } from 'svelte'
-  import { parseDeck, applySlideRaw, slugify, scanBlocks, cursorStart, blockLineRange } from './lib/deck.js'
+  import { parseDeck, applySlideRaw, applyMeta, slugify, scanBlocks, cursorStart, blockLineRange } from './lib/deck.js'
   import { normalizeKey, isCountDigit } from './lib/keys.js'
   import { move, operatorRange, clamp, listIndent } from './lib/motions.js'
   import { lineStarts, lineAt } from './lib/livepreview.js'
@@ -28,6 +28,8 @@
   import Overview from './components/Overview.svelte'
   import ImageDialog from './components/ImageDialog.svelte'
   import LinkDialog from './components/LinkDialog.svelte'
+  import MetaDialog from './components/MetaDialog.svelte'
+  import ConfirmDialog from './components/ConfirmDialog.svelte'
   import starter from '../decks/starter.md?raw'
   import tutorial from '../decks/tutor.md?raw'
 
@@ -54,6 +56,8 @@
   let printAll = $state(false)
   let stageEl = $state(null)
   let fileInput = $state(null)
+  let confirmMessage = $state('')
+  let confirmAction = null
 
   let countBuf = ''
   let pendingOp = null
@@ -664,8 +668,50 @@
   }
 
   function newDeck() {
+    if (source.trim()) {
+      askConfirm(
+        'You will lose all your unsaved work. Do you really wish to continue?',
+        blankDeck
+      )
+      return
+    }
+    blankDeck()
+  }
+
+  function blankDeck() {
     storage.clearDeckSource()
     adoptDeck('', 'blank deck')
+  }
+
+  function askConfirm(message, action) {
+    confirmMessage = message
+    confirmAction = action
+    mode = 'confirm'
+  }
+
+  function resolveConfirm(goAhead) {
+    const action = confirmAction
+    confirmAction = null
+    confirmMessage = ''
+    setMode('present')
+    if (goAhead) action?.()
+  }
+
+  function openMeta() {
+    // The dialog reads the deck's frontmatter: fold a pending slide edit back
+    // into the source first so nothing is lost.
+    flushWrite()
+    mode = 'meta'
+  }
+
+  function submitMeta(values) {
+    const next = applyMeta(source, values)
+    source = next
+    // The derived deck has not recomputed yet: parse the fresh source for the
+    // theme, so choosing a theme applies immediately.
+    applyDeckTheme(parseDeck(next).meta)
+    setMode('present')
+    showToast('metadata saved')
   }
 
   function openTutorial() {
@@ -809,6 +855,7 @@
     { id: 'code', key: 'code nix', label: 'insert a code block', run: (q) => insertCode(q.split(/\s+/)[1]) },
     { id: 'link', key: 'link', label: 'insert a link (URL + text)', run: openLink },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
+    { id: 'meta', key: 'meta', label: 'edit title, author, theme (frontmatter)', run: openMeta },
     { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {
         const argument = q.split(/\s+/)[1]
         if (argument === 'reset') setScale(1)
@@ -822,7 +869,7 @@
         if (argument) importFromUrl(argument)
         else openFilePicker()
       } },
-    { id: 'save', key: 'save', label: 'download the markdown', run: saveDeck },
+    { id: 'save', key: 'save', alias: ['w'], label: 'download the markdown', run: saveDeck },
     { id: 'export', key: 'export', label: 'export as PDF (print)', run: exportPdf },
     { id: 'undo', key: 'undo', label: 'undo the last edit', run: undo },
     { id: 'raw', key: 'raw', label: 'hide the stage footer (OBS)', run: () => { raw = !raw; showToast(raw ? 'capture mode' : 'stage footer visible') } },
@@ -907,6 +954,17 @@
       return
     }
 
+    if (mode === 'confirm') {
+      if (key === 'enter' || key === 'y' || key === 'Y') {
+        event.preventDefault()
+        resolveConfirm(true)
+      } else if (key === 'esc' || key === 'n' || key === 'N') {
+        event.preventDefault()
+        resolveConfirm(false)
+      }
+      return
+    }
+
     if (mode === 'help') {
       if (key === 'esc' || key === '?' || key === 'q') {
         event.preventDefault()
@@ -953,7 +1011,7 @@
       return
     }
 
-    if (mode === 'image' || mode === 'link') return
+    if (mode === 'image' || mode === 'link' || mode === 'meta') return
 
     if (mode === 'insert') {
       if (key === 'esc') {
@@ -1277,6 +1335,21 @@
   open={mode === 'link'}
   oninsert={insertLink}
   onclose={() => setMode('present')}
+/>
+
+<MetaDialog
+  open={mode === 'meta'}
+  meta={deck.meta}
+  themes={THEMES}
+  onsubmit={submitMeta}
+  onclose={() => setMode('present')}
+/>
+
+<ConfirmDialog
+  open={mode === 'confirm'}
+  message={confirmMessage}
+  onyes={() => resolveConfirm(true)}
+  onno={() => resolveConfirm(false)}
 />
 
 {#if mode === 'help'}

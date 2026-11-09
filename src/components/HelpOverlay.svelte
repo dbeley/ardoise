@@ -9,6 +9,7 @@
     { code: '<!-- layout: center -->', label: 'centre the slide vertically' },
     { code: '::: key … :::', label: 'callout (key, warn, ok, note, quote)' },
     { code: '```mermaid', label: 'diagram rendered on output' },
+    { code: ':meta', label: 'edit the frontmatter (title, author, theme)' },
     { code: '---', label: 'slide separator' },
   ]
 </script>
