@@ -34,6 +34,8 @@
   import tutorial from '../decks/tutor.md?raw'
 
   const THEMES = ['ardoise', 'paper', 'gruvbox', 'nord']
+  const SCALE_MIN = 0.8
+  const SCALE_MAX = 2
   const params = new URLSearchParams(location.search)
   const TEXT_KEYS = ['h', 'l', 'w', 'b', 'e', '0', '$', '↑', '↓']
   // Motions an operator accepts: characters, lines, and whole blocks (`d}`).
@@ -51,7 +53,7 @@
   let cursor = $state(0)
 
   let theme = $state(THEMES.includes(params.get('theme')) ? params.get('theme') : storage.theme())
-  let typeScale = $state(clamp(Number(storage.scale()) || 1, 0.8, 1.6))
+  let typeScale = $state(clamp(Number(storage.scale()) || 1, SCALE_MIN, SCALE_MAX))
   let raw = $state(params.get('raw') === '1')
   let toastMsg = $state('')
   let overviewCursor = $state(0)
@@ -902,9 +904,6 @@
     }
   }
 
-  const SCALE_MIN = 0.8
-  const SCALE_MAX = 1.6
-
   function setScale(value) {
     if (value === undefined || value === null || value === '') {
       showToast(`size: ${Math.round(typeScale * 100)}%`)
@@ -942,7 +941,7 @@
     { id: 'link', key: 'link', label: 'insert a link (URL + text)', run: openLink },
     { id: 'theme', key: 'theme nord', label: 'change theme', run: (q) => setTheme(q.split(/\s+/)[1] || cycleTheme()) },
     { id: 'meta', key: 'meta', label: 'edit title, author, theme (frontmatter)', run: openMeta },
-    { id: 'size', key: 'size 120', label: 'text size (80-160%)', run: (q) => {
+    { id: 'size', key: 'size 120', label: 'text size (80-200%)', run: (q) => {
         const argument = q.split(/\s+/)[1]
         if (argument === 'reset') setScale(1)
         else if (argument) setScale(argument)

@@ -159,7 +159,7 @@ through `BroadcastChannel`; no server, no account.
 | `s` | download the deck as markdown (`:w` works too) |
 | `:export` | PDF through the browser print dialog |
 | `:theme nord` | palette: `ardoise`, `paper`, `gruvbox`, `nord` |
-| `:size 120`, `:size reset` | text size, 80% to 160% |
+| `:size 120`, `:size reset` | text size, 80% to 200% (`+` / `-` step it 5% at a time) |
 
 A deck can set its own `theme:` in the frontmatter. The deck as edited, the theme, the
 last slide and the text size are kept in `localStorage`; nothing leaves the browser.
