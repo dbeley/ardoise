@@ -320,6 +320,51 @@ export function slugify(value) {
     .replace(/(^-|-$)/g, '')
 }
 
+/**
+ * Update frontmatter keys without touching the rest of the file: unknown keys,
+ * comments and the body stay verbatim. An emptied value removes its line; a
+ * header left with no key at all is dropped.
+ */
+export function applyMeta(source, patch = {}) {
+  const text = String(source ?? '').replace(/\r\n?/g, '\n')
+  const { head, body } = splitHead(text)
+  const inner = head ? head.split('\n').slice(1, -1) : []
+  const keys = new Set(Object.keys(patch))
+  const seen = new Set()
+  const next = []
+
+  for (const line of inner) {
+    const match = line.match(/^([A-Za-z0-9_-]+)\s*:/)
+    const key = match?.[1]
+    if (!key || !keys.has(key)) {
+      next.push(line)
+      continue
+    }
+    seen.add(key)
+    const value = formatMetaValue(patch[key])
+    if (value) next.push(`${key}: ${value}`)
+  }
+
+  for (const [key, raw] of Object.entries(patch)) {
+    if (seen.has(key)) continue
+    const value = formatMetaValue(raw)
+    if (value) next.push(`${key}: ${value}`)
+  }
+
+  if (!next.length) return body
+  return `---\n${next.join('\n')}\n---\n\n${body.replace(/^\n+/, '')}`
+}
+
+/** Quote only when the value would otherwise break the `key: value` reading. */
+function formatMetaValue(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return ''
+  if (!/[:#"'\n]/.test(text) && !/^\s|^[-?[\]{},&*!|>%@`]/.test(text)) return text
+  if (!text.includes('"')) return `"${text}"`
+  if (!text.includes("'")) return `'${text}'`
+  return `"${text.replace(/"/g, '\\"')}"`
+}
+
 /** Separate the YAML header from the body, keeping the header verbatim. */
 export function splitHead(source) {
   const text = String(source ?? '').replace(/\r\n?/g, '\n')
