@@ -142,14 +142,15 @@ through `BroadcastChannel`; no server, no account.
 | `:open` | pick a markdown file |
 | `:open https://.../deck.md` | import from a URL (if CORS allows) |
 | `?deck=./deck.md` | load a deck at startup |
-| `:new` / `:reset` | start over from a blank deck |
+| `:new` / `:reset` | start over from a blank deck (asks first) |
+| `:meta` | edit the metadata: title, author, theme |
 | `:tutor` | open the tutorial |
 | `:search` | search the deck (same as `/`) |
 | `:paragraph` | new paragraph after the current block |
 | `:image` | insert an image from a URL |
 | `:code` / `:code nix` | insert an empty code block (language optional) |
 | `:link` | insert a link (URL + text) |
-| `s` | download the deck as markdown |
+| `s` | download the deck as markdown (`:w` works too) |
 | `:export` | PDF through the browser print dialog |
 | `:theme nord` | palette: `ardoise`, `paper`, `gruvbox`, `nord` |
 | `:size 120`, `:size reset` | text size, 80% to 160% |
@@ -157,6 +158,29 @@ through `BroadcastChannel`; no server, no account.
 A deck can set its own `theme:` in the frontmatter. The deck as edited, the theme, the
 last slide and the text size are kept in `localStorage`; nothing leaves the browser.
 First launch opens a blank deck with a one-line hint.
+
+### Metadata
+
+The metadata is the YAML frontmatter at the very top of the markdown file, between the
+first `---` and the next `---`. It is **not** a slide: it never appears in the deck, in
+the overview, in the print/PDF output or during the presentation. `---` alone after the
+header starts the first slide.
+
+```markdown
+---
+title: My talk
+author: David
+theme: nord
+---
+
+# Cover title
+```
+
+`title` names the downloaded file and the speaker window, `author`, `subtitle`,
+`event` and `date` are free-form, and `theme` picks a palette (`ardoise`, `paper`,
+`gruvbox`, `nord`). Since the header is not part of a slide, it has no cursor in the
+editor: use `:meta` to change it from inside ardoise. The dialog rewrites only those
+keys, so hand-written keys and the rest of the file stay untouched.
 
 ## Recording (OBS)
 
